@@ -1,0 +1,17 @@
+\begin{table*}[t]
+\centering
+\caption{Mode 4 (Full ARMG) vs. Mode 2 (Stateless Self-Correction) Comparative Trade-Off Profile}
+\label{tab:tradeoff}
+\begin{tabular}{lrrccp{5.5cm}}
+\hline
+\textbf{Evaluation Dimension} & \textbf{Mode 2} & \textbf{Mode 4} & \textbf{Absolute Delta} & \textbf{Relative Delta} & \textbf{Operational Engineering Interpretation} \\
+\hline
+Mean Repair Retries ($K$) & 0.43 & 0.28 & $-0.15$ retries & $-34.38\%$ & Observed reduction in repair iterations \\
+Mean Token Expenditure & 572.72 & 542.37 & $-30.35$ tokens & $-5.30\%$ & Token savings by avoiding repetitive repair prompts \\
+PostgreSQL Execution Success & $92.00\%$ & $96.00\%$ & $+4.00\text{ pp}$ & $+4.35\%$ & Execution recovery on Query Q19 \\
+End-to-End Latency & $7,149.68\text{ ms}$ & $8,564.89\text{ ms}$ & $+1,415.21\text{ ms}$ & $+19.79\%$ & Architectural overhead of state graph and FAISS \\
+Relational Semantic Accuracy & $68.00\%$ & $68.00\%$ & $0.00\text{ pp}$ & $0.00\%$ & Observed identical relational execution accuracy in the evaluated benchmark \\
+\hline
+\multicolumn{6}{l}{\footnotesize \textsuperscript{*}Percentage points (pp) and relative percentage changes (\%) are strictly distinguished.} \\
+\end{tabular}
+\end{table*}

@@ -1,0 +1,18 @@
+\begin{table*}[t]
+\centering
+\caption{Canonical 7-Tier Exception Taxonomy Matrix and Candidate Repair Heuristics}
+\label{tab:taxonomy}
+\begin{tabular}{ccllp{5.5cm}}
+\hline
+\textbf{Tier} & \textbf{Category} & \textbf{Implementation Definition} & \textbf{Detection Pattern / Trigger} & \textbf{Candidate Repair Action} \\
+\hline
+1 & Validation & Syntactic/Safety AST rejections & Non-SELECT, destructive DDL/DML, stacked injections & Abort repair loop; transition to \texttt{STATUS\_BLOCKED} \\
+2 & Syntax & Malformed SQL syntax & Driver syntax errors, unclosed quotes, malformed clauses & Strip invalid tokens; regenerate with strict SQL grammar \\
+3 & Semantic & Schema/Identifier non-existence & Unknown column/table names, column ambiguity & Remap to closest catalog token; inject negative constraint \\
+4 & Planning & Cartesian products / Join failures & Unbounded joins, missing foreign-key predicates & Inject explicit \texttt{JOIN ... ON} clause from schema catalog \\
+5 & Permission & Privileged/Administrative commands & Read-only violations, grant/revoke rejections & Block execution; restrict to read-only \texttt{SELECT} \\
+6 & Resource & Operational execution timeouts & Query cancellation, memory quota exceeded & Enforce query timeout; suggest predicate pushdown \\
+7 & Execution & Unclassified runtime driver failures & Catch-all database exceptions & Fallback to raw normalized driver error trace \\
+\hline
+\end{tabular}
+\end{table*}

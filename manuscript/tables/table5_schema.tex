@@ -1,0 +1,16 @@
+\begin{table}[h]
+\centering
+\caption{Relational Data Warehouse Star Schema Specification}
+\label{tab:schema}
+\begin{tabular}{lcllp{4.5cm}}
+\hline
+\textbf{Table Name} & \textbf{Role} & \textbf{Rows} & \textbf{Primary Key} & \textbf{Major Attributes / Foreign Key Constraints} \\
+\hline
+\texttt{dim\_time} & Dimension & 365 & \texttt{time\_key} & full\_date, day\_of\_week, calendar\_month, calendar\_quarter, calendar\_year \\
+\texttt{dim\_geography} & Dimension & 6 & \texttt{geo\_key} & region, zone, market\_type \\
+\texttt{dim\_product} & Dimension & 8 & \texttt{product\_key} & product\_name, category, sub\_category, unit\_cost \\
+\texttt{fact\_sales\_performance} & Fact & 2,000 & \texttt{fact\_key} & units\_sold, gross\_revenue, discount\_applied, net\_profit. \newline FK: \texttt{time\_key}, \texttt{geo\_key}, \texttt{product\_key} \\
+\hline
+\multicolumn{5}{l}{\footnotesize \textsuperscript{*}Deterministically seeded via NumPy \texttt{seed=42} (\texttt{scripts/seed\_warehouse.py}).} \\
+\end{tabular}
+\end{table}

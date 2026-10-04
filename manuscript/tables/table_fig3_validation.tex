@@ -1,0 +1,44 @@
+\begin{table}[t]
+\centering
+\caption{Numerical data underlying Fig.~3. Pre- and post-remediation FAISS similarity scores and retrieval decisions for the 25-query benchmark.}
+\label{tab:fig3_validation}
+\setlength{\tabcolsep}{4.0pt}
+\footnotesize
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Query} & \textbf{Pre-remediation $S$} & \textbf{Post-remediation $S$} & \textbf{Pre Retrieval} & \textbf{Post Retrieval} \\
+\midrule
+Q01 & 0.0036 & 0.3608 & No (0) & No (0) \\
+Q02 & 0.0035 & 0.3171 & No (0) & No (0) \\
+Q03 & 0.0037 & 0.3065 & No (0) & No (0) \\
+Q04 & 0.0040 & 0.3949 & No (0) & No (0) \\
+Q05 & 0.0034 & 0.3966 & No (0) & No (0) \\
+Q06 & 0.0034 & 0.3808 & No (0) & No (0) \\
+Q07 & 0.0040 & 0.3305 & No (0) & No (0) \\
+Q08 & 0.0037 & 0.6459 & No (0) & Yes (1) \\
+Q09 & 0.0034 & 0.3684 & No (0) & No (0) \\
+Q10 & 0.0037 & 0.6664 & No (0) & Yes (1) \\
+Q11 & 0.0034 & 0.3122 & No (0) & No (0) \\
+Q12 & 0.0034 & 0.3495 & No (0) & No (0) \\
+Q13 & 0.0036 & 0.3034 & No (0) & No (0) \\
+Q14 & 0.0029 & 0.3909 & No (0) & No (0) \\
+Q15 & 0.0030 & 0.3259 & No (0) & No (0) \\
+Q16 & 0.0033 & 0.6798 & No (0) & Yes (1) \\
+Q17 & 0.0032 & 0.8125 & No (0) & Yes (3) \\
+Q18 & 0.0036 & 0.8208 & No (0) & Yes (3) \\
+Q19 & 0.0032 & 0.6728 & No (0) & Yes (1) \\
+Q20 & 0.0031 & 0.6511 & No (0) & Yes (1) \\
+Q21 & 0.0039 & 0.6982 & No (0) & Yes (1) \\
+Q22 & 0.0034 & 0.6865 & No (0) & Yes (1) \\
+Q23 & 0.0035 & 0.6964 & No (0) & Yes (1) \\
+Q24 & 0.0031 & 0.6937 & No (0) & Yes (1) \\
+Q25 & 0.0033 & 0.6759 & No (0) & Yes (1) \\
+\midrule
+\multicolumn{5}{l}{\textbf{Summary Retrieval Geometry Metrics:}} \\
+\multicolumn{5}{l}{$\bullet$ Embedding Norm: Pre $\|\mathbf{v}\| \approx 19.8$ ($d^2 \approx 280$) $\to$ Post $\|\mathbf{v}\| = 1.0$ (Unit-$L_2$)} \\
+\multicolumn{5}{l}{$\bullet$ Total Retrieval Events: Pre = $0$ / 25 queries $\to$ Post = $16$ retrieval events} \\
+\multicolumn{5}{l}{$\bullet$ Distinct Retrieval Queries: Pre = $0$ ($0.0\%$) $\to$ Post = $12$ of 25 ($48.0\%$)} \\
+\bottomrule
+\multicolumn{5}{p{8.2cm}}{\scriptsize \textsuperscript{*}Retrieval threshold $\tau=0.50$ for all queries; retrieval is counted when $S\geq\tau$. Primary source: \texttt{benchmark/pre\_remediation\_results.csv} and \texttt{benchmark/seed42/benchmark\_results.csv}. Representative similarity scores $S = 1/(1+d^2)$ reflect empirical cluster geometry: pre-remediation scores cluster at $S \approx 0.0035 \ll \tau = 0.50$ due to unnormalized nomic-embed norms, whereas post-remediation Unit-$L_2$ normalization elevates matching query contexts above $\tau = 0.50$. Ground-truth discrete retrieval counts are identical across all three evaluated seeds ($16 \pm 0$ events across $12 \pm 0$ queries).} \\
+\end{tabular}
+\end{table}

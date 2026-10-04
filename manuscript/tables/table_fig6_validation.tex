@@ -1,0 +1,45 @@
+\begin{table}[t]
+\centering
+\caption{Numerical data underlying Fig.~6. Persistent memory-store size and admission/reinforcement events across the 25-query benchmark.}
+\label{tab:fig6_validation}
+\setlength{\tabcolsep}{2.5pt}
+\footnotesize
+\begin{tabular}{lccll}
+\toprule
+\textbf{Query} & \textbf{Mode 3 Store Size After Query} & \textbf{Mode 4 Store Size After Query} & \textbf{Mode 3 Event} & \textbf{Mode 4 Governance Event} \\
+\midrule
+Q01 & 1 & 0 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
+Q02 & 2 & 0 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
+Q03 & 3 & 0 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
+Q04 & 3 & 1 & None (Att.~1 Fail) & \texttt{ADMITTED} \\
+Q05 & 4 & 1 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
+Q06 & 5 & 1 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
+Q07 & 6 & 1 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
+Q08 & 7 & 1 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
+Q09 & 8 & 1 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
+Q10 & 9 & 1 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
+Q11 & 10 & 1 & \texttt{NAIVE\_STORED} & \texttt{REJECTED} (Fail) \\
+Q12 & 11 & 1 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
+Q13 & 12 & 2 & \texttt{NAIVE\_STORED} & \texttt{ADMITTED} \\
+Q14 & 13 & 2 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
+Q15 & 13 & 3 & None (Att.~1 Fail) & \texttt{ADMITTED} \\
+Q16 & 14 & 3 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
+Q17 & 15 & 3 & \texttt{NAIVE\_STORED} & \texttt{REINFORCED} (mem-18fc8e84) \\
+Q18 & 16 & 3 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
+Q19 & 17 & 3 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
+Q20 & 18 & 3 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
+Q21 & 19 & 3 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
+Q22 & 20 & 3 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
+Q23 & 21 & 3 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
+Q24 & 22 & 3 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
+Q25 & 23 & 3 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
+\midrule
+\multicolumn{5}{l}{\textbf{Key Governance Invariants:}} \\
+\multicolumn{5}{l}{$\bullet$ Initial Admissions: Q04 (Store=1), Q13 (Store=2), Q15 (Store=3)} \\
+\multicolumn{5}{l}{$\bullet$ Mutual Exclusion Invariant: Q17 reinforces \texttt{mem-18fc8e84}; new admission suppressed} \\
+\multicolumn{5}{l}{$\bullet$ Invariant Store Plateau: Mode 4 store size is invariant at exactly 3 from Q15 to Q25} \\
+\multicolumn{5}{l}{$\bullet$ Mode 3 Unmanaged Accumulation: 23 entries accumulated without lifecycle governance} \\
+\bottomrule
+\multicolumn{5}{p{8.3cm}}{\scriptsize \textsuperscript{*}Primary source: \texttt{benchmark/seed42/benchmark\_results.csv}, \texttt{benchmark/seed123/benchmark\_results.csv}, \texttt{benchmark/seed999/benchmark\_results.csv}, and \texttt{manuscript/figures/source/fig6\_memory\_growth.py}. Progression is identical across all three benchmark seeds ($n = 3$). In Mode 3, queries failing on Attempt 1 without self-correction (Q04, Q15) are unadmitted, while 23 successful queries are stored unconstrained. In Mode 4, only post-repair recoveries passing admission gating ($\text{Utility}_0 \ge 0.25$) are admitted, reaching a persistent plateau of exactly 3 memories.} \\
+\end{tabular}
+\end{table}

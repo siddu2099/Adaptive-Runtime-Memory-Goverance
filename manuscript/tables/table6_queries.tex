@@ -1,0 +1,17 @@
+\begin{table}[h]
+\centering
+\caption{Benchmark Query Corpus Distribution Across Complexity Categories}
+\label{tab:query_corpus}
+\begin{tabular}{lccl}
+\hline
+\textbf{Category} & \textbf{Queries} & \textbf{Count} & \textbf{Analytical Focus and SQL Clause Complexity} \\
+\hline
+Category A & Q01--Q05 & 5 & Simple aggregations, basic filters, group-by, order-by clauses \\
+Category B & Q06--Q13 & 8 & Multi-table Star Schema joins, dimension filtering, compound conditions \\
+Category C & Q14--Q19 & 6 & Advanced window functions (\texttt{RANK()}, \texttt{LAG()}, cumulative partitions) \\
+Category D & Q20--Q25 & 6 & Semantic/schema trap queries, attribute sequence inversions, strict ordering \\
+\hline
+\textbf{Total Corpus} & Q01--Q25 & 25 & B2B Technology Sales Analytics Domain (\texttt{benchmark/queries.json}) \\
+\hline
+\end{tabular}
+\end{table}

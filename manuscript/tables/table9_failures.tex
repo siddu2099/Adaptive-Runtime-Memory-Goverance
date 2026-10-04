@@ -1,0 +1,19 @@
+\begin{table*}[t]
+\centering
+\caption{Forensic Diagnostic Breakdown of the Seven Divergent Semantic Queries in Mode 4}
+\label{tab:divergent_queries}
+\begin{tabular}{ccclp{4.8cm}p{4.2cm}}
+\hline
+\textbf{Query} & \textbf{Cat} & \textbf{PG Status} & \textbf{RelAcc} & \textbf{Generated SQL Construct Deviation} & \textbf{Comparator Diagnostic Rationale} \\
+\hline
+Q05 & A & Success & False & Omitted required \texttt{ORDER BY net\_profit DESC} & Gold required ordering; positional sequence matching failed \\
+Q14 & C & Success & False & Substituted simple \texttt{ORDER BY} for \texttt{RANK() OVER} & Failed multiset row ranking equivalence \\
+Q15 & C & Success & False & Computed monthly aggregation without cumulative frame & Omitted running total window specification \\
+Q17 & C & Success & False & Included invalid grouping attribute in \texttt{LAG()} partition & Generated multi-row monthly output instead of scalar lag \\
+Q18 & C & Success & False & Ranked globally without \texttt{PARTITION BY category} & Missed category-scoped partition grouping \\
+Q19 & C & Success & False & Omitted base revenue column and rounding format & Projection signature and decimal precision discrepancy \\
+Q25 & D & Success & False & Inverted column sequence: \texttt{(market, profit, rev)} & Positional tuple attribute mismatch against gold signature \\
+\hline
+\multicolumn{6}{l}{\footnotesize \textsuperscript{*}Q05 executed cleanly on PostgreSQL but failed because the comparator enforces strict positional matching when gold SQL specifies ordering.} \\
+\end{tabular}
+\end{table*}

@@ -1,0 +1,18 @@
+\begin{table*}[t]
+\centering
+\caption{Mathematical Governance Engine Control Equations and Parameter Specifications}
+\label{tab:governance_equations}
+\begin{tabular}{lllp{4.5cm}}
+\hline
+\textbf{Control Mechanism} & \textbf{Formal Equation / Formulation} & \textbf{Parameter Defaults} & \textbf{Operational Implementation Role} \\
+\hline
+Operational Utility & $\text{Utility} = C \times \text{SuccessRate} \times \text{ContextSim} \times \text{Recency}$ & Priors: $C_0=0.5, \text{SR}_0=0.5$ & Multi-factor utility evaluation \\
+Admission Gating & $\text{Admit}(K) \iff \text{Utility}_0(K) \ge \theta_{\text{admit}}$ & $\theta_{\text{admit}} = 0.25$ & Gating candidate operational knowledge \\
+Confidence Escalation & $C_{t+1} = C_t + \alpha (1.0 - C_t)$ & $\alpha = 0.10$ & Asymptotic reinforcement upon success \\
+Failure Penalty & $C_{t+1} = \max(0.0, \, C_t \times (1.0 - \beta))$ & $\beta = 0.15$ & Multiplicative confidence penalty on failure \\
+Continuous Decay & $C(t) = C_{\text{ref}} \times \exp(-\lambda \Delta t)$ & $\lambda = 0.05\text{ day}^{-1}$ & Exponential decay over time ($*$Unexercised) \\
+Mutual Exclusion & $\text{Reinforce}(M) \iff M_{\text{applied}} \neq \emptyset$; $\text{Admit}(K)$ otherwise & Mutually exclusive & Invariant preventing duplicate memory bloat \\
+\hline
+\multicolumn{4}{l}{\footnotesize \textsuperscript{*}Temporal decay is fully unit-tested in \texttt{tests/unit/test\_governance.py}, but unexercised under the 3.5-minute benchmark execution clock.} \\
+\end{tabular}
+\end{table*}

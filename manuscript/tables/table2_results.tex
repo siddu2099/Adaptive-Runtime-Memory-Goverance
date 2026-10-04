@@ -1,0 +1,18 @@
+\begin{table*}[t]
+\centering
+\caption{Comparative Empirical Benchmark Results Across Six Experimental Modes ($n = 3$ Repeated Executions)}
+\label{tab:results}
+\begin{tabular}{lcccccc}
+\hline
+\textbf{Experimental Mode} & \textbf{ExecAcc (\%)} & \textbf{ExecSucc (\%)} & \textbf{Retries ($K$)} & \textbf{Latency (ms)} & \textbf{Tokens} & \textbf{Store Size} \\
+\hline
+Mode 1 (Zero-Shot) & $57.33 \pm 2.31$ & $76.00 \pm 0.00$ & $0.00 \pm 0.00$ & $5,087.73 \pm 210.33$ & $360.48 \pm 0.48$ & $0$ \\
+Mode 2 (Stateless Self-Correction) & $68.00 \pm 0.00$ & $92.00 \pm 0.00$ & $0.43 \pm 0.02$ & $7,149.68 \pm 231.65$ & $572.72 \pm 12.68$ & $0$ \\
+Mode 3 (Naive Vector RAG) & $68.00 \pm 0.00$ & $92.00 \pm 0.00$ & $0.00 \pm 0.00$ & $6,844.01 \pm 56.90$ & $558.28 \pm 0.00$ & $23$ \\
+Mode 4 (Full ARMG) & $68.00 \pm 0.00$ & $96.00 \pm 0.00$ & $0.28 \pm 0.00$ & $8,564.89 \pm 103.16$ & $542.37 \pm 0.02$ & $3$ \\
+Mode 5 (ARMG $-$ Neg Constraints) & $68.00 \pm 0.00$ & $96.00 \pm 0.00$ & $0.36 \pm 0.00$ & $8,941.28 \pm 108.68$ & $553.93 \pm 0.02$ & $3$ \\
+Mode 6 (ARMG with $\lambda = 0.0$) & $68.00 \pm 0.00$ & $94.67 \pm 2.31$ & $0.37 \pm 0.02$ & $9,036.97 \pm 178.55$ & $599.67 \pm 13.94$ & $3$ \\
+\hline
+\multicolumn{7}{l}{\footnotesize \textsuperscript{*}All reported figures represent mean $\pm$ sample standard deviation across three repeated executions under seeds 42, 123, and 999.} \\
+\end{tabular}
+\end{table*}
