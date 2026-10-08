@@ -46,6 +46,7 @@ from graph.state import (
 from memory.governance import MemoryGovernanceEngine
 from memory.knowledge_extractor import RuntimeKnowledgeExtractor
 from memory.models import RuntimeKnowledge, RuntimeMemory
+from memory.telemetry import RetrievalTelemetryLogger, get_telemetry_logger
 from memory.vector_store import FAISSMemoryStore
 from validation.execution_validator import ExecutionValidator
 
@@ -102,6 +103,7 @@ class ARMGRepairWorkflow:
         governance_engine: Optional[MemoryGovernanceEngine] = None,
         vector_store: Optional[FAISSMemoryStore] = None,
         embed_fn: Optional[Callable[[str], Optional[List[float]]]] = None,
+        telemetry_logger: Optional[RetrievalTelemetryLogger] = None,
     ):
         self.environment = environment
         self.introspector = introspector or SchemaIntrospector(environment)
@@ -115,6 +117,7 @@ class ARMGRepairWorkflow:
         self.governance_engine = governance_engine or MemoryGovernanceEngine()
         self.vector_store = vector_store or FAISSMemoryStore()
         self.embed_fn = embed_fn or default_embed_fn
+        self.telemetry_logger = telemetry_logger
 
     # =========================================================================
     # Nodes (Section 12)
@@ -147,18 +150,78 @@ class ARMGRepairWorkflow:
         }
 
     def memory_retrieval_node(self, state: ARMGState) -> Dict[str, Any]:
-        """Node 2: Retrieve relevant governed memories from FAISS vector store."""
+        """Node 2: Retrieve relevant governed memories from FAISS vector store with full telemetry."""
         retrieved: List[RuntimeMemory] = []
-        if self.vector_store.count() > 0 and self.embed_fn is not None:
+        telemetry = dict(state.get("telemetry", {}))
+        run_id = telemetry.get("run_id", "default_run")
+        mode = telemetry.get("mode", "Mode 4 (Full ARMG)")
+        query_id = telemetry.get("query_id", state.get("query_id", "Q00"))
+        store_size_before = self.vector_store.count()
+        top_k = 3
+        threshold = 0.50
+
+        t_logger = self.telemetry_logger or get_telemetry_logger()
+        raw_candidates_telemetry: List[Dict[str, Any]] = []
+
+        if store_size_before == 0 or self.embed_fn is None:
+            # Section 6: Empty-Store Semantics
+            if t_logger:
+                t_logger.log_retrieval_event(
+                    run_id=run_id,
+                    mode=mode,
+                    query_id=query_id,
+                    candidates=[],
+                    retrieval_count=0,
+                    accepted_memory_count=0,
+                    store_size_before=store_size_before,
+                    top_k=top_k,
+                    threshold=threshold,
+                )
+        else:
             query_vec = self.embed_fn(state["user_query"])
-            if query_vec is not None:
-                matches = self.vector_store.search(query_vec, top_k=3)
-                for mem, dist, sim in matches:
-                    # Filter only active/stable memories with sufficient similarity
-                    if sim >= 0.50 and mem.status.value not in ("ARCHIVED", "DELETED"):
+            if query_vec is None:
+                if t_logger:
+                    t_logger.log_retrieval_event(
+                        run_id=run_id,
+                        mode=mode,
+                        query_id=query_id,
+                        candidates=[],
+                        retrieval_count=0,
+                        accepted_memory_count=0,
+                        store_size_before=store_size_before,
+                        top_k=top_k,
+                        threshold=threshold,
+                    )
+            else:
+                # Section 4: Capture ALL candidates returned by FAISS index.search() before threshold and governance filtering
+                raw_matches = self.vector_store.search_raw_candidates(query_vec, top_k=top_k)
+                for mem, rank, d2, sim in raw_matches:
+                    passed_thresh = bool(sim >= threshold)
+                    is_active = mem.status.value not in ("ARCHIVED", "DELETED")
+                    if passed_thresh and is_active:
                         retrieved.append(mem)
 
-        telemetry = dict(state.get("telemetry", {}))
+                    raw_candidates_telemetry.append({
+                        "memory_id": mem.memory_id,
+                        "rank": rank,
+                        "distance_l2_sq": d2,
+                        "similarity": sim,
+                        "passed_retrieval_threshold": passed_thresh,
+                    })
+
+                if t_logger:
+                    t_logger.log_retrieval_event(
+                        run_id=run_id,
+                        mode=mode,
+                        query_id=query_id,
+                        candidates=raw_candidates_telemetry,
+                        retrieval_count=len(retrieved),
+                        accepted_memory_count=len(retrieved),
+                        store_size_before=store_size_before,
+                        top_k=top_k,
+                        threshold=threshold,
+                    )
+
         telemetry["memory_retrieval_count"] = len(retrieved)
 
         return {
@@ -310,14 +373,6 @@ class ARMGRepairWorkflow:
 
         knowledge = self.knowledge_extractor.extract(obs, diag, schema_ctx)
 
-        # Check if any retrieved memory directly contributed to this diagnosis/rule
-        applied_id: Optional[str] = state.get("applied_memory_id")
-        if not applied_id and state.get("retrieved_memories"):
-            for mem in state["retrieved_memories"]:
-                if mem.root_cause == diag.root_cause or mem.repair_strategy == diag.repair_rule:
-                    applied_id = mem.memory_id
-                    break
-
         curr_retry = state.get("retry_count", 0)
         max_retries = state.get("max_retries", 3)
         telemetry = dict(state.get("telemetry", {}))
@@ -331,9 +386,31 @@ class ARMGRepairWorkflow:
             new_retry = max_retries
             new_status = STATUS_FAILED
 
+        # Invariant (Phase 1A): Provenance must be evaluated per-attempt.
+        # A memory is applied ONLY if it directly matches THIS attempt's diagnosis/rule.
+        # A stale applied_memory_id from a prior failed attempt must not persist across retries.
+        applied_id: Optional[str] = None
+        if state.get("retrieved_memories"):
+            for mem in state["retrieved_memories"]:
+                if mem.root_cause == diag.root_cause or mem.repair_strategy == diag.repair_rule:
+                    applied_id = mem.memory_id
+                    break
+
+        repair_history = list(state.get("repair_history") or telemetry.get("repair_history") or [])
+        repair_history.append({
+            "attempt": new_retry,
+            "taxonomy_category": diag.taxonomy_category.value if diag.taxonomy_category else None,
+            "root_cause": diag.root_cause,
+            "repair_rule": diag.repair_rule,
+            "candidate_memories": [m.memory_id for m in (state.get("retrieved_memories") or [])],
+            "applied_memory_id": applied_id,
+        })
+        telemetry["repair_history"] = repair_history
+
         return {
             "runtime_knowledge": knowledge,
             "applied_memory_id": applied_id,
+            "repair_history": repair_history,
             "retry_count": new_retry,
             "status": new_status,
             "telemetry": telemetry,
@@ -372,11 +449,18 @@ class ARMGRepairWorkflow:
         retry_count = state.get("retry_count", 0)
         applied_id = state.get("applied_memory_id")
 
+        t_logger = self.telemetry_logger or get_telemetry_logger()
+        run_id = telemetry.get("run_id", "default_run")
+        mode = telemetry.get("mode", "Mode 4 (Full ARMG)")
+        query_id = telemetry.get("query_id", state.get("query_id", "Q00"))
+
         if status == STATUS_BLOCKED:
             # Explicit safety policy violation: terminal block
             # Enforces: zero admission, zero reinforcement, zero FAISS insertion
             telemetry["memory_admission"] = "SAFETY_VIOLATION_BLOCKED"
             telemetry["terminal_reason"] = state.get("safety_category", "safety_rejection")
+            if t_logger:
+                t_logger.update_store_size_after_query(query_id=query_id, mode=mode, store_size_after=self.vector_store.count())
             return {
                 "status": status,
                 "execution_result": None,
@@ -402,14 +486,49 @@ class ARMGRepairWorkflow:
 
                 if vec is not None and len(vec) == 768:
                     admitted = self.governance_engine.admit(rk, embedding=vec, context_similarity=1.0)
+                    conf = rk.confidence
+                    succ = 0.5
+                    sim = 1.0
+                    rec = 1.0
+                    utility = (
+                        admitted.utility
+                        if admitted is not None
+                        else self.governance_engine.calculate_utility(
+                            context_similarity=sim,
+                            delta_t=0.0,
+                            confidence=conf,
+                            successful_uses=0,
+                            total_uses=0,
+                        )
+                    )
+                    thresh = self.governance_engine.admission_threshold
+                    is_admitted = (admitted is not None)
+
                     if admitted is not None:
                         # Positively reinforce admitted operational knowledge
                         recorded = self.governance_engine.record_success(admitted)
                         self.vector_store.add(recorded, vec)
                         telemetry["memory_admission"] = "ADMITTED"
                         telemetry["admitted_memory_id"] = recorded.memory_id
+                        mem_id = recorded.memory_id
                     else:
                         telemetry["memory_admission"] = "REJECTED_BELOW_THRESHOLD"
+                        mem_id = None
+
+                    if t_logger:
+                        t_logger.log_admission_event(
+                            run_id=run_id,
+                            mode=mode,
+                            query_id=query_id,
+                            memory_id=mem_id,
+                            admission_utility=utility,
+                            memory_admitted=is_admitted,
+                            threshold=thresh,
+                            confidence=conf,
+                            success_rate=succ,
+                            similarity=sim,
+                            recency=rec,
+                        )
                 else:
                     telemetry["memory_admission"] = "EMBEDDING_FAILED"
 
@@ -422,7 +541,23 @@ class ARMGRepairWorkflow:
                 if existing_mem and existing_mem.embedding:
                     penalized = self.governance_engine.record_failure(existing_mem)
                     self.vector_store.add(penalized, penalized.embedding)
-                    telemetry["penalized_memory_id"] = applied_id
+
+        # Update terminal store size after query across all retrieval records for this query
+        if t_logger:
+            store_size_after = self.vector_store.count()
+            t_logger.update_store_size_after_query(
+                query_id=query_id,
+                mode=mode,
+                store_size_after=store_size_after,
+            )
+
+        # Annotate terminal status and reinforcement in repair history
+        repair_history = list(state.get("repair_history") or telemetry.get("repair_history") or [])
+        if repair_history:
+            repair_history[-1]["terminal_status"] = status
+            if status == STATUS_SUCCESS and applied_id:
+                repair_history[-1]["reinforced_memory_id"] = applied_id
+            telemetry["repair_history"] = repair_history
 
         # Compute total latency
         telemetry["total_latency_ms"] = round(

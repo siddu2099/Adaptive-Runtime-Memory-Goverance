@@ -6,14 +6,14 @@
 \toprule
 \textbf{Experimental Mode} & \textbf{ExecSucc (\%)} & \textbf{ExecAcc (\%)} & \textbf{Gap (pp)} & \textbf{PG Successes / 75} & \textbf{Rel. Correct / 75} & \textbf{Total Evals} \\
 \midrule
-Mode 1 (Zero-Shot Baseline) & $76.00 \pm 0.00$ & $57.33 \pm 2.31$ & $18.67$ & 57 / 75 & 43 / 75 & 75 \\
-Mode 2 (Stateless Self-Correction) & $92.00 \pm 0.00$ & $68.00 \pm 0.00$ & $24.00$ & 69 / 75 & 51 / 75 & 75 \\
+Mode 1 (Zero-Shot Baseline) & $80.00 \pm 0.00$ & $60.00 \pm 0.00$ & $20.00$ & 60 / 75 & 45 / 75 & 75 \\
+Mode 2 (Stateless Self-Correction) & $96.00 \pm 0.00$ & $68.00 \pm 0.00$ & $28.00$ & 72 / 75 & 51 / 75 & 75 \\
 Mode 3 (Naive Vector RAG) & $92.00 \pm 0.00$ & $68.00 \pm 0.00$ & $24.00$ & 69 / 75 & 51 / 75 & 75 \\
 Mode 4 (Full ARMG) & $96.00 \pm 0.00$ & $68.00 \pm 0.00$ & $28.00$ & 72 / 75 & 51 / 75 & 75 \\
 Mode 5 (ARMG $-$ Neg Constraints) & $96.00 \pm 0.00$ & $68.00 \pm 0.00$ & $28.00$ & 72 / 75 & 51 / 75 & 75 \\
-Mode 6 (ARMG with $\lambda = 0.0$) & $94.67 \pm 2.31$ & $68.00 \pm 0.00$ & $26.67$ & 71 / 75 & 51 / 75 & 75 \\
+Mode 6 (ARMG with $\lambda = 0.0$) & $96.00 \pm 0.00$ & $68.00 \pm 0.00$ & $28.00$ & 72 / 75 & 51 / 75 & 75 \\
 \midrule
-\textbf{Total Corpus Execution} & $91.11$ & $66.22$ & $24.89$ & 410 / 450 & 298 / 450 & 450 \\
+\textbf{Total Corpus Execution} & $92.67$ & $66.67$ & $26.00$ & 417 / 450 & 300 / 450 & 450 \\
 \bottomrule
 \multicolumn{7}{p{16.8cm}}{\footnotesize \textsuperscript{*}Primary source: \texttt{benchmark/seed42/benchmark\_results.csv}, \texttt{benchmark/seed123/benchmark\_results.csv}, \texttt{benchmark/seed999/benchmark\_results.csv}, and \texttt{manuscript/evidence\_package.md} Section D. Each experimental mode was evaluated over 25 distinct benchmark queries across $n = 3$ isolated repeated runs ($N = 75$ evaluations per mode, $N = 450$ total system executions). Mean $\pm$ sample standard deviation represents across-seed variance. The discrepancy gap (ExecSucc $-$ ExecAcc) quantifies executable SQL that executes cleanly without database driver error but diverges from relational ground truth.} \\
 \end{tabular}

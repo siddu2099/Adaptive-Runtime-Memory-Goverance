@@ -20,6 +20,46 @@ from typing import Any, Dict, List, Optional
 from memory.models import MemoryState, RuntimeKnowledge, RuntimeMemory
 
 
+class ControlledClock:
+    """Injectable deterministic clock for temporal lifecycle validation (Phase 6)."""
+
+    def __init__(
+        self,
+        start_time: Optional[datetime] = None,
+        initial_epoch: int = 0,
+    ) -> None:
+        self._current_time = start_time or datetime(2026, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+        self._epoch = initial_epoch
+
+    def now(self) -> datetime:
+        """Return the current simulated datetime."""
+        return self._current_time
+
+    @property
+    def epoch(self) -> int:
+        """Return the current simulated epoch."""
+        return self._epoch
+
+    def current_epoch(self) -> int:
+        """Return the current simulated epoch."""
+        return self._epoch
+
+    def advance_days(self, days: int) -> int:
+        """Advance time by a specified number of calendar days / epochs."""
+        from datetime import timedelta
+        self._epoch += days
+        self._current_time += timedelta(days=days)
+        return self._epoch
+
+    def set_epoch(self, epoch: int) -> int:
+        """Set epoch directly, adjusting simulated wall-clock time accordingly."""
+        from datetime import timedelta
+        diff = epoch - self._epoch
+        self._epoch = epoch
+        self._current_time += timedelta(days=diff)
+        return self._epoch
+
+
 class MemoryGovernanceEngine:
     """Mathematical governance and lifecycle management engine for RuntimeMemory."""
 
@@ -32,6 +72,7 @@ class MemoryGovernanceEngine:
         penalty_rate: float = 0.15,
         decay_rate: float = 0.05,
         archive_retention_days: int = 30,
+        clock: Optional[Any] = None,
     ):
         self.admission_threshold = admission_threshold
         self.stable_threshold = stable_threshold
@@ -40,6 +81,26 @@ class MemoryGovernanceEngine:
         self.penalty_rate = penalty_rate
         self.decay_rate = decay_rate
         self.archive_retention_days = archive_retention_days
+        self.clock = clock
+
+    def get_current_epoch(self, explicit_epoch: Optional[int] = None) -> int:
+        """Determine current epoch from explicit argument or injected clock."""
+        if explicit_epoch is not None:
+            return explicit_epoch
+        if self.clock is not None:
+            if hasattr(self.clock, "current_epoch"):
+                return self.clock.current_epoch()
+            if hasattr(self.clock, "epoch"):
+                return self.clock.epoch
+        return 0
+
+    def get_now_iso(self) -> str:
+        """Determine current ISO timestamp from injected clock or system UTC."""
+        if self.clock is not None and hasattr(self.clock, "now"):
+            dt = self.clock.now()
+            if hasattr(dt, "isoformat"):
+                return dt.isoformat()
+        return datetime.now(timezone.utc).isoformat()
 
     def calculate_utility(
         self,
@@ -138,7 +199,7 @@ class MemoryGovernanceEngine:
         knowledge: RuntimeKnowledge,
         embedding: Optional[List[float]] = None,
         context_similarity: float = 1.0,
-        current_epoch: int = 0,
+        current_epoch: Optional[int] = None,
     ) -> Optional[RuntimeMemory]:
         """Evaluate candidate knowledge against admission threshold for memory entry.
         
@@ -165,7 +226,8 @@ class MemoryGovernanceEngine:
         if initial_utility < self.admission_threshold:
             return None
 
-        now_iso = datetime.now(timezone.utc).isoformat()
+        epoch = self.get_current_epoch(current_epoch)
+        now_iso = self.get_now_iso()
         return RuntimeMemory(
             context=dict(knowledge.context),
             failure_type=knowledge.failure_type,
@@ -182,9 +244,9 @@ class MemoryGovernanceEngine:
             total_uses=0,
             created_at=now_iso,
             last_used_at=now_iso,
-            simulated_epoch=current_epoch,
+            simulated_epoch=epoch,
             confidence_reference=knowledge.confidence,
-            reference_epoch=current_epoch,
+            reference_epoch=epoch,
             archive_epoch=None,
         )
 
@@ -201,7 +263,12 @@ class MemoryGovernanceEngine:
             NEW -> ACTIVE
             confidence >= 0.80 -> STABLE
         """
-        epoch = current_epoch if current_epoch is not None else memory.simulated_epoch
+        if memory.status == MemoryState.DELETED:
+            return memory
+
+        epoch = self.get_current_epoch(current_epoch) if current_epoch is not None else (
+            self.clock.current_epoch() if self.clock is not None else memory.simulated_epoch
+        )
         new_succ = memory.successful_uses + 1
         new_total = memory.total_uses + 1
 
@@ -209,8 +276,10 @@ class MemoryGovernanceEngine:
         c_new = c_old + self.escalation_rate * (1.0 - c_old)
         c_new = max(0.0, min(1.0, round(c_new, 6)))
 
-        # Lifecycle state transition
-        if c_new >= self.stable_threshold:
+        # Lifecycle state transition (ARCHIVED cannot be resurrected; DELETED is terminal)
+        if memory.status in (MemoryState.ARCHIVED, MemoryState.DELETED):
+            new_status = memory.status
+        elif c_new >= self.stable_threshold:
             new_status = MemoryState.STABLE
         elif memory.status in (MemoryState.NEW, MemoryState.DECAYING):
             new_status = MemoryState.ACTIVE
@@ -226,7 +295,7 @@ class MemoryGovernanceEngine:
             delta_t=0.0,
         )
 
-        now_iso = datetime.now(timezone.utc).isoformat()
+        now_iso = self.get_now_iso()
         return memory.copy_with(
             confidence=c_new,
             utility=new_utility,
@@ -253,7 +322,12 @@ class MemoryGovernanceEngine:
             C_new < 0.20 -> ARCHIVED
             STABLE and C_new < 0.80 -> DECAYING
         """
-        epoch = current_epoch if current_epoch is not None else memory.simulated_epoch
+        if memory.status == MemoryState.DELETED:
+            return memory
+
+        epoch = self.get_current_epoch(current_epoch) if current_epoch is not None else (
+            self.clock.current_epoch() if self.clock is not None else memory.simulated_epoch
+        )
         new_total = memory.total_uses + 1
         # successful_uses is NOT incremented on failure
 
@@ -261,7 +335,9 @@ class MemoryGovernanceEngine:
         c_new = max(0.0, round(c_old * (1.0 - self.penalty_rate), 6))
 
         archive_epoch = memory.archive_epoch
-        if c_new < self.archive_threshold:
+        if memory.status in (MemoryState.ARCHIVED, MemoryState.DELETED):
+            new_status = memory.status
+        elif c_new < self.archive_threshold:
             new_status = MemoryState.ARCHIVED
             archive_epoch = epoch
         elif memory.status == MemoryState.STABLE and c_new < self.stable_threshold:
@@ -277,7 +353,7 @@ class MemoryGovernanceEngine:
             delta_t=0.0,
         )
 
-        now_iso = datetime.now(timezone.utc).isoformat()
+        now_iso = self.get_now_iso()
         return memory.copy_with(
             confidence=c_new,
             utility=new_utility,
@@ -293,7 +369,7 @@ class MemoryGovernanceEngine:
     def apply_decay(
         self,
         memory: RuntimeMemory,
-        current_epoch: int,
+        current_epoch: Optional[int] = None,
     ) -> RuntimeMemory:
         """Apply continuous exponential decay based on elapsed calendar days/epochs.
         
@@ -304,7 +380,8 @@ class MemoryGovernanceEngine:
         if memory.status == MemoryState.DELETED:
             return memory
 
-        delta_t = max(0, current_epoch - memory.reference_epoch)
+        epoch = self.get_current_epoch(current_epoch)
+        delta_t = max(0, epoch - memory.reference_epoch)
         c_ref = memory.confidence_reference
         c_decayed = c_ref * math.exp(-self.decay_rate * delta_t)
         c_decayed = max(0.0, min(1.0, round(c_decayed, 6)))
@@ -312,7 +389,7 @@ class MemoryGovernanceEngine:
         archive_epoch = memory.archive_epoch
         if c_decayed < self.archive_threshold and memory.status not in (MemoryState.ARCHIVED, MemoryState.DELETED):
             new_status = MemoryState.ARCHIVED
-            archive_epoch = current_epoch
+            archive_epoch = epoch
         elif c_decayed < self.stable_threshold and memory.status in (MemoryState.STABLE, MemoryState.ACTIVE):
             new_status = MemoryState.DECAYING
         else:
@@ -333,29 +410,31 @@ class MemoryGovernanceEngine:
             utility=new_utility,
             recency=round(recency, 6),
             status=new_status,
-            simulated_epoch=current_epoch,
+            simulated_epoch=epoch,
             archive_epoch=archive_epoch,
         )
 
     def apply_decay_sweep(
         self,
         memories: List[RuntimeMemory],
-        current_epoch: int,
+        current_epoch: Optional[int] = None,
     ) -> List[RuntimeMemory]:
         """Sweep all memories for simulated time: apply decay and purge expired archives.
         
         If status == ARCHIVED and (current_epoch - archive_epoch) >= archive_retention_days:
             transitions to DELETED.
         """
+        epoch = self.get_current_epoch(current_epoch)
         updated_list: List[RuntimeMemory] = []
         for mem in memories:
-            decayed_mem = self.apply_decay(mem, current_epoch)
+            decayed_mem = self.apply_decay(mem, epoch)
             if decayed_mem.status == MemoryState.ARCHIVED:
                 arch_epoch = decayed_mem.archive_epoch or decayed_mem.simulated_epoch
-                if (current_epoch - arch_epoch) >= self.archive_retention_days:
+                if (epoch - arch_epoch) >= self.archive_retention_days:
                     decayed_mem = decayed_mem.copy_with(
                         status=MemoryState.DELETED,
-                        simulated_epoch=current_epoch,
+                        simulated_epoch=epoch,
                     )
             updated_list.append(decayed_mem)
         return updated_list
+

@@ -24,6 +24,8 @@ import pytest
 import requests
 from dotenv import load_dotenv
 
+pytestmark = pytest.mark.environment
+
 # Load local environment variables from .env if present
 load_dotenv()
 

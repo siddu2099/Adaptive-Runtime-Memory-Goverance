@@ -1,0 +1,65 @@
+{
+  "pipeline_version": "ARMG_Phase5_Canonical_v1.0",
+  "inputs": {
+    "benchmark_results": "benchmark/benchmark_results.csv",
+    "retrieval_telemetry": "benchmark/retrieval_telemetry.csv",
+    "seed_evaluations": [
+      "benchmark/seed42/benchmark_results.csv",
+      "benchmark/seed123/benchmark_results.csv",
+      "benchmark/seed999/benchmark_results.csv"
+    ],
+    "raw_hierarchy": "benchmark/raw/"
+  },
+  "validation": {
+    "status": "VALID",
+    "total_evaluations": 450,
+    "seeds": [
+      42,
+      123,
+      999
+    ],
+    "modes": [
+      "Mode 1 (Zero-Shot)",
+      "Mode 2 (Stateless Self-Correction)",
+      "Mode 3 (Naive Vector RAG)",
+      "Mode 4 (Full ARMG)",
+      "Mode 5 (ARMG - Negative Constraints)",
+      "Mode 6 (ARMG - Temporal Decay)"
+    ],
+    "telemetry_rows": 141,
+    "telemetry_candidates": 129
+  },
+  "outputs": {
+    "summaries": [
+      "benchmark\\statistical_summary.json",
+      "benchmark\\statistical_summary.csv",
+      "benchmark\\multi_seed_summary.md"
+    ],
+    "tables": [
+      "manuscript\\tables\\table1_taxonomy.tex",
+      "manuscript\\tables\\table2_results.tex",
+      "manuscript\\tables\\table3_gap.tex",
+      "manuscript\\tables\\table4_config.tex",
+      "manuscript\\tables\\table5_schema.tex",
+      "manuscript\\tables\\table6_queries.tex",
+      "manuscript\\tables\\table7_governance.tex",
+      "manuscript\\tables\\table8_tradeoff.tex",
+      "manuscript\\tables\\table9_failures.tex",
+      "manuscript\\tables\\table_fig3_validation.tex",
+      "manuscript\\tables\\table_fig4_validation.tex",
+      "manuscript\\tables\\table_fig5_validation.tex",
+      "manuscript\\tables\\table_fig6_validation.tex",
+      "manuscript\\tables\\table_figure_validation_matrix.tex"
+    ],
+    "figures": [
+      "manuscript\\figures\\png\\fig3_retrieval_geometry.png",
+      "manuscript\\figures\\svg\\fig3_retrieval_geometry.svg",
+      "manuscript\\figures\\png\\fig4_execsucc_execacc.png",
+      "manuscript\\figures\\svg\\fig4_execsucc_execacc.svg",
+      "manuscript\\figures\\png\\fig5_tradeoff.png",
+      "manuscript\\figures\\svg\\fig5_tradeoff.svg",
+      "manuscript\\figures\\png\\fig6_memory_growth.png",
+      "manuscript\\figures\\svg\\fig6_memory_growth.svg"
+    ]
+  }
+}

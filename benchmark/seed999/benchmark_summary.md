@@ -1,50 +1,10 @@
-# ARMG Phase 9: IEEE Benchmark Results
-
-## Comparative Results Table
+# ARMG Authoritative Benchmark — Seed 999
 
 | Mode | ExecAcc (%) | Mean Retries (+/- std) | Mean Latency ms (+/- std) | Mean Tokens (+/- std) |
 | :--- | :---: | :---: | :---: | :---: |
-| Mode 1 (Zero-Shot) | 60.0% (15/25) | 0 +/- 0.0 | 4864.18 +/- 814.38 | 359.92 +/- 32.95 |
-| Mode 2 (Stateless Self-Correction) | 68.0% (17/25) | 0.4 +/- 0.87 | 6901.61 +/- 4963.27 | 558.08 +/- 449.62 |
-| Mode 3 (Naive Vector RAG) | 68.0% (17/25) | 0 +/- 0.0 | 6790.07 +/- 768.98 | 558.28 +/- 77.31 |
-| Mode 4 (Full ARMG) | 68.0% (17/25) | 0.28 +/- 0.68 | 8445.94 +/- 4607.7 | 542.36 +/- 480.02 |
-| Mode 5 (ARMG - Negative Constraints) | 68.0% (17/25) | 0.36 +/- 0.76 | 8817.16 +/- 4925.38 | 553.96 +/- 429.03 |
-| Mode 6 (ARMG - Temporal Decay) | 68.0% (17/25) | 0.36 +/- 0.76 | 8852.95 +/- 4925.49 | 591.64 +/- 522.65 |
-
-## Category-Wise Accuracy Breakdown
-
-### Mode 1 (Zero-Shot)
-- **Category A**: 3/5 (60.0%)
-- **Category B**: 6/8 (75.0%)
-- **Category C**: 1/6 (16.7%)
-- **Category D**: 5/6 (83.3%)
-
-### Mode 2 (Stateless Self-Correction)
-- **Category A**: 4/5 (80.0%)
-- **Category B**: 7/8 (87.5%)
-- **Category C**: 1/6 (16.7%)
-- **Category D**: 5/6 (83.3%)
-
-### Mode 3 (Naive Vector RAG)
-- **Category A**: 3/5 (60.0%)
-- **Category B**: 8/8 (100.0%)
-- **Category C**: 1/6 (16.7%)
-- **Category D**: 5/6 (83.3%)
-
-### Mode 4 (Full ARMG)
-- **Category A**: 4/5 (80.0%)
-- **Category B**: 7/8 (87.5%)
-- **Category C**: 1/6 (16.7%)
-- **Category D**: 5/6 (83.3%)
-
-### Mode 5 (ARMG - Negative Constraints)
-- **Category A**: 4/5 (80.0%)
-- **Category B**: 7/8 (87.5%)
-- **Category C**: 1/6 (16.7%)
-- **Category D**: 5/6 (83.3%)
-
-### Mode 6 (ARMG - Temporal Decay)
-- **Category A**: 4/5 (80.0%)
-- **Category B**: 7/8 (87.5%)
-- **Category C**: 1/6 (16.7%)
-- **Category D**: 5/6 (83.3%)
+| Mode 1 (Zero-Shot) | 60.0% (15/25) | 0 +/- 0.0 | 4868.63 +/- 867.54 | 360.88 +/- 32.91 |
+| Mode 2 (Stateless Self-Correction) | 68.0% (17/25) | 0.28 +/- 0.68 | 6380.67 +/- 4154.19 | 503.96 +/- 377.56 |
+| Mode 3 (Naive Vector RAG) | 68.0% (17/25) | 0 +/- 0.0 | 6743.25 +/- 787.12 | 558.28 +/- 77.31 |
+| Mode 4 (Full ARMG) | 68.0% (17/25) | 0.32 +/- 0.69 | 8761.74 +/- 4647.42 | 565.48 +/- 482.96 |
+| Mode 5 (ARMG - Negative Constraints) | 68.0% (17/25) | 0.32 +/- 0.69 | 8884.26 +/- 4761.76 | 530.76 +/- 391.76 |
+| Mode 6 (ARMG - Temporal Decay) | 68.0% (17/25) | 0.28 +/- 0.68 | 8591.09 +/- 4755.23 | 542.08 +/- 479.68 |

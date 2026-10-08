@@ -5,7 +5,7 @@
 ## Abstract
 Deploying local Large Language Models (LLMs) for enterprise Text-to-SQL workflows introduces acute operational challenges: repetitive schema repair oscillations, unconstrained vector memory accumulation in retrieval stores, and the catastrophic risk of executing destructive SQL mutations against relational warehouses. Standard stateless self-correction prompts models with raw database errors without cross-query operational memory, while unmanaged vector retrieval systems suffer from duplicate accumulation and memory bloat. This paper presents **Adaptive Runtime Memory Governance (ARMG)**, a closed-loop runtime architecture that converts PostgreSQL database execution feedback into governed, reusable operational memory. ARMG wraps frozen local open-weights models in a 10-node directed state graph integrating deterministic Abstract Syntax Tree (AST) and catalog-based error diagnosis across a canonical 7-tier exception taxonomy, ephemeral knowledge extraction, admission- and reinforcement-gated FAISS vector memory, diagnostic negative constraints, and a deterministic pre-execution AST safety guardrail.
 
-In an empirical evaluation across three isolated repeated benchmark executions ($n = 3$, comprising 450 total evaluated query runs across six experimental modes) on a 25-query synthetic enterprise-style Star Schema data warehouse using local `qwen2.5:7b-instruct` under greedy decoding (`temperature = 0.0`), ARMG achieved verified pre-execution safety, preventing any destructive SQL statement from reaching the PostgreSQL database. Relative to stateless self-correction, ARMG achieved an observed **34.38% reduction in mean repair iterations** (0.28 vs. 0.43 retries per query) and a **5.30% reduction in token consumption** (542.37 vs. 572.72 tokens per query), while increasing PostgreSQL execution success from 92.00% to 96.00%. Furthermore, algorithmic mutual exclusion between reinforcement and admission maintained persistent vector store size invariant at exactly 3 memories in the evaluated sequential benchmark, compared to unmanaged retrieval accumulation (23 memories). However, ARMG incurred a **19.79% end-to-end latency overhead** (8,564.89 ms vs. 7,149.68 ms) due to embedding generation and state-graph orchestration, and **relational execution accuracy plateaued identically at 68.00%** (17 of 25 queries) across both ARMG and stateless self-correction. In addition, continuous exponential temporal decay remained experimentally unexercised under the ~3.5-minute benchmark execution clock. These findings demonstrate that governed operational memory provides bounded repair behavior, token economy, and verifiable execution safety, while establishing that operational memory alone does not resolve the baseline semantic window-function reasoning boundaries of local 7B-parameter models.
+In an empirical evaluation across three isolated repeated benchmark executions ($n = 3$, comprising 450 total evaluated query runs across six experimental modes) on a 25-query synthetic enterprise-style Star Schema data warehouse using local `qwen2.5:7b-instruct` under greedy decoding (`temperature = 0.0`), ARMG achieved verified pre-execution safety, preventing any destructive SQL statement from reaching the PostgreSQL database. Both Full ARMG (Mode 4) and stateless self-correction (Mode 2) achieved **96.00% PostgreSQL execution success** (72 of 75 queries) and **68.00% relational execution accuracy** (51 of 75 queries), recovering from 80.00% success and 60.00% accuracy in zero-shot baseline (Mode 1). Furthermore, algorithmic mutual exclusion between reinforcement and admission maintained persistent vector store size strictly invariant at exactly 3 memories in the evaluated sequential benchmark, compared to unmanaged retrieval accumulation (23 memories in Mode 3). ARMG incurred a **39.73% end-to-end latency overhead** (9,000.59 ms vs. 6,441.56 ms), a **33.33% increase in mean repair iterations** (0.37 vs. 0.28 retries per query), and a **19.68% increase in token expenditure** (602.85 vs. 503.72 tokens per query) due to prompt memory injection and state-graph orchestration. In addition, continuous exponential temporal decay remained experimentally unexercised under the ~3.5-minute benchmark execution clock. These findings demonstrate that governed operational memory provides bounded store growth, reproducible lifecycle control, and verifiable execution safety, while establishing that operational memory alone does not overcome the baseline semantic window-function reasoning boundaries of local 7B-parameter models.
 
 ---
 
@@ -39,10 +39,9 @@ While recent research has advanced decomposed in-context learning [1], multi-age
 We evaluate ARMG across three isolated repeated benchmark executions ($n = 3$, comprising 450 total evaluated query runs across six experimental modes) on a synthetically generated enterprise-style Star Schema data warehouse benchmark. Our experimental findings establish:
 - **Verified Retrieval Geometry**: Unit-L2 normalization of runtime query embeddings restored the intended FAISS L2 nearest-neighbor similarity geometry above retrieval threshold $\tau = 0.50$, yielding 16 retrieval events across 12 distinct benchmark queries ($48.0\%$ query coverage).
 - **Controlled Lifecycle & Deduplication**: In the evaluated benchmark workflow, algorithmic mutual exclusion maintained persistent vector store size strictly invariant at 3 memories across queries Q15 through Q25, whereas unmanaged RAG accumulated 23 entries.
-- **Repair-Loop Efficiency & Token Economy**: ARMG achieved an observed 34.38% reduction in mean repair loop iterations (0.28 vs. 0.43 retries per query) and a 5.30% reduction in mean token expenditure (542.37 vs. 572.72 tokens) compared to stateless self-correction.
+- **Execution Recovery & Accuracy Parity**: Both Full ARMG and stateless self-correction recovered execution success from 80.00% (Mode 1) to 96.00% (72/75 queries), while relational execution accuracy plateaued identically at 68.00% (51/75 queries) across all self-correcting and governed modes.
 - **Verified Pre-Execution Safety**: Across all 450 post-remediation evaluations (and 150 historical baseline runs), zero destructive SQL statements reached the PostgreSQL warehouse.
-- **Architectural Latency Trade-Off**: ARMG incurred a 19.79% end-to-end latency penalty (8,564.89 ms vs. 7,149.68 ms), establishing that ARMG trades wall-clock orchestration overhead for repair iteration efficiency.
-- **Relational Execution Accuracy Plateau**: Relational execution accuracy remained identical at 68.00% (17/25 queries) between Full ARMG and stateless self-correction, demonstrating that operational memory does not overcome the baseline semantic window-function reasoning limitations of local 7B models.
+- **Architectural Latency Trade-Off**: ARMG incurred a 39.73% end-to-end latency penalty (9,000.59 ms vs. 6,441.56 ms), a 33.33% increase in repair retries (0.37 vs. 0.28), and a 19.68% increase in token expenditure (602.85 vs. 503.72 tokens), demonstrating that memory injection introduces orchestration overhead without resolving baseline 7B semantic reasoning limits.
 
 ### Research Contributions
 1. **Architectural Contribution**: We design and implement a closed-loop runtime architecture decoupled from model weights, orchestrating zero-token catalog schema introspection, static AST safety validation, 7-tier deterministic error diagnosis, and bounded self-correction in a 10-node directed state graph.
@@ -259,10 +258,10 @@ To enforce strict pre-execution containment against destructive mutations, ARMG 
 - **Decoding Configuration**: Greedy decoding (`temperature = 0.0`) enforced across initial generation and repair generation.
 - **Embedding Model**: `nomic-embed-text` [18] (768 dimensions, Unit-L2 normalized).
 - **Vector Index**: FAISS `IndexIDMap2` wrapping `IndexFlatL2(768)` [17].
-- **Database**: PostgreSQL 16 on `localhost:5432` (`armg_db`).
+- **Database**: PostgreSQL 18.1 on `localhost:5432` (`armg_db`).
 - **Benchmark Warehouse**: A synthetically generated enterprise-style Star Schema Data Warehouse modeling B2B technology product transactions across calendar year 2025, populated deterministically via NumPy `seed=42` (`scripts/seed_warehouse.py`, 2,000 fact records, 4 tables: `dim_time`, `dim_geography`, `dim_product`, `fact_sales_performance`). We utilize a controlled warehouse to enable precise measurement of multi-turn operational memory and lifecycle governance, contrasting with cross-domain academic benchmarks (Spider [23], BIRD [24]) that evaluate single-turn schema generalizability across hundreds of independent databases.
 - **Benchmark Corpus**: 25 analytical queries (`benchmark/queries.json`, SHA-256: `8f3a11f238bf93187e29fa18204af44b926eb190a7bbae1598caa0ea97f38189`) across Categories A, B, C, D.
-- **Repeated Experimental Protocol**: Three isolated repeated benchmark executions (Seeds 42, 123, 999) across six experimental modes ($3 \times 6 \times 25 = 450$ total evaluated query runs). Because greedy decoding was enforced and benchmark seeds were not passed to Ollama, these repeated runs evaluate **pipeline reproducibility, execution stability, and memory-state consistency**, rather than stochastic sampling variance ($n = 3$ repeated runs).
+- **Repeated Experimental Protocol**: Three isolated repeated benchmark executions (Seeds 42, 123, 999) across six experimental modes ($3 \times 6 \times 25 = 450$ total evaluated query runs). Benchmark seeds are plumbed directly to Ollama options (`options["seed"]`), but because greedy decoding was strictly enforced (`temperature = 0.0`), these repeated runs evaluate **pipeline reproducibility, execution stability, and memory-state consistency**, rather than stochastic sampling variance ($n = 3$ repeated runs).
 
 The canonical system configuration, component mapping, and operational specifications are summarized in Table IV.
 
@@ -273,12 +272,12 @@ Table IV: Canonical System Configuration and Component Mapping
 | Foundation Model | Local Ollama instance | `qwen2.5:7b-instruct` (7.61B parameters) |
 | Inference Configuration | Greedy decoding | `temperature = 0.0`, `top_p = 1.0` |
 | Embedding Model | Local Ollama instance | `nomic-embed-text` (768d, Unit-$L_2$ normalized) |
-| Vector Indexing Library | CPU Flat Index | FAISS `IndexIDMap2` wrapping `IndexFlatL2` |
-| Relational Data Warehouse | Physical container | PostgreSQL 16.2 on `localhost:5432` |
+| Vector Indexing Library | CPU Flat Index | FAISS `IndexIDMap2` wrapping `IndexFlatIP` |
+| Relational Data Warehouse | Physical container | PostgreSQL 18.1 on `localhost:5432` |
 | Graph Orchestration | Directed state graph | LangGraph 0.2.x (`StateGraph` runtime) |
 | Static SQL Parser | AST guardrail | SQLGlot 25.x (Dialect: PostgreSQL) |
 | Execution Driver | Python DB-API 2.0 | `psycopg2-binary` 2.9.x |
-| Python Runtime Environment | Local Workstation | Python 3.11.9 (NVIDIA CUDA acceleration via Ollama) |
+| Python Runtime Environment | Local Workstation | Python 3.11.9 (.venv) / Python 3.13.2 (system) |
 
 The architectural specification, table roles, row counts, primary keys, and foreign-key integrity constraints for the synthetic Star Schema warehouse are detailed in Table V.
 
@@ -333,12 +332,12 @@ Table II: Comparative Empirical Benchmark Results Across Six Experimental Modes 
 
 | Experimental Mode | Relational ExecAcc (%) | PostgreSQL Success (%) | Mean Retries ($K$) | Mean Latency (ms) | Mean Tokens | Store Size |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| Mode 1 (Zero-Shot) | $57.33\% \pm 2.31\%$ | $76.00\% \pm 0.00\%$ | $0.00 \pm 0.00$ | $5,087.73 \pm 210.33$ | $360.48 \pm 0.48$ | 0 |
-| Mode 2 (Stateless Self-Correction) | $68.00\% \pm 0.00\%$ | $92.00\% \pm 0.00\%$ | $0.43 \pm 0.02$ | $7,149.68 \pm 231.65$ | $572.72 \pm 12.68$ | 0 |
-| Mode 3 (Naive Vector RAG) | $68.00\% \pm 0.00\%$ | $92.00\% \pm 0.00\%$ | $0.00 \pm 0.00$ | $6,844.01 \pm 56.90$ | $558.28 \pm 0.00$ | 23 |
-| Mode 4 (Full ARMG) | $68.00\% \pm 0.00\%$ | $96.00\% \pm 0.00\%$ | $0.28 \pm 0.00$ | $8,564.89 \pm 103.16$ | $542.37 \pm 0.02$ | 3 |
-| Mode 5 (ARMG − Neg Constraints) | $68.00\% \pm 0.00\%$ | $96.00\% \pm 0.00\%$ | $0.36 \pm 0.00$ | $8,941.28 \pm 108.68$ | $553.93 \pm 0.02$ | 3 |
-| Mode 6 (ARMG with $\lambda=0.0$) | $68.00\% \pm 0.00\%$ | $94.67\% \pm 2.31\%$ | $0.37 \pm 0.02$ | $9,036.97 \pm 178.55$ | $599.67 \pm 13.94$ | 3 |
+| Mode 1 (Zero-Shot) | $60.00\% \pm 0.00\%$ | $80.00\% \pm 0.00\%$ | $0.00 \pm 0.00$ | $4,859.70 \pm 7.98$ | $360.57 \pm 0.37$ | 0 |
+| Mode 2 (Stateless Self-Correction) | $68.00\% \pm 0.00\%$ | $96.00\% \pm 0.00\%$ | $0.28 \pm 0.00$ | $6,441.56 \pm 105.51$ | $503.72 \pm 0.42$ | 0 |
+| Mode 3 (Naive Vector RAG) | $68.00\% \pm 0.00\%$ | $92.00\% \pm 0.00\%$ | $0.00 \pm 0.00$ | $6,776.25 \pm 34.40$ | $558.28 \pm 0.00$ | 23 |
+| Mode 4 (Full ARMG) | $68.00\% \pm 0.00\%$ | $96.00\% \pm 0.00\%$ | $0.37 \pm 0.05$ | $9,000.59 \pm 184.33$ | $602.85 \pm 28.49$ | 3 |
+| Mode 5 (ARMG − Neg Constraints) | $68.00\% \pm 0.00\%$ | $96.00\% \pm 0.00\%$ | $0.32 \pm 0.00$ | $8,768.48 \pm 100.30$ | $530.97 \pm 0.40$ | 4 |
+| Mode 6 (ARMG with $\lambda=0.0$) | $68.00\% \pm 0.00\%$ | $96.00\% \pm 0.00\%$ | $0.28 \pm 0.00$ | $8,507.98 \pm 73.15$ | $542.27 \pm 0.39$ | 3 |
 
 *\*All reported $\pm$ figures represent sample standard deviation across three repeated executions under seeds 42, 123, and 999.*
 
@@ -354,50 +353,51 @@ Table VIII: Mode 4 (Full ARMG) vs. Mode 2 (Stateless Self-Correction) Comparativ
 
 | Evaluation Dimension | Mode 2 | Mode 4 | Absolute Delta | Relative Delta | Operational Engineering Interpretation |
 | :--- | :---: | :---: | :---: | :---: | :--- |
-| Mean Repair Retries ($K$) | 0.43 | 0.28 | $-0.15$ retries | $-34.38\%$ | Observed reduction in repair iterations |
-| Mean Token Expenditure | 572.72 | 542.37 | $-30.35$ tokens | $-5.30\%$ | Token savings by avoiding repetitive repair prompts |
-| PostgreSQL Execution Success | 92.00% | 96.00% | $+4.00\text{ pp}$ | $+4.35\%$ | Execution recovery on Query Q19 |
-| End-to-End Latency | 7,149.68 ms | 8,564.89 ms | $+1,415.21\text{ ms}$ | $+19.79\%$ | Architectural overhead of state graph and FAISS |
+| Mean Repair Retries ($K$) | 0.28 | 0.37 | $+0.09$ retries | $+33.33\%$ | Observed shift in repair iterations |
+| Mean Token Expenditure | 503.72 | 602.85 | $+99.13$ tokens | $+19.68\%$ | Token expenditure difference in repair prompts |
+| PostgreSQL Execution Success | 96.00% | 96.00% | $+0.00\text{ pp}$ | $+0.00\%$ | Physical execution success recovery comparison |
+| End-to-End Latency | 6,441.56 ms | 9,000.59 ms | $+2,559.03\text{ ms}$ | $+39.73\%$ | Architectural overhead of state graph and FAISS |
 | Relational Semantic Accuracy | 68.00% | 68.00% | $0.00\text{ pp}$ | $0.00\%$ | Observed identical relational execution accuracy in the evaluated benchmark |
 
-*\*Percentage points (pp) and relative percentage changes (%) are strictly distinguished.*
+*\*Percentage points (pp) and relative percentage changes (%) are strictly distinguished. Derived dynamically from raw CSV benchmark run logs.*
 
 Fig. 5 visualizes this operational trade-off profile across the five core operational metrics, explicitly distinguishing relative percentage changes from percentage-point shifts.
 
 ![Figure 5: Mode 2 vs. Full ARMG Operational Trade-Off Profile](figures/png/fig5_tradeoff.png)
-*Fig. 5. Mode 2 vs. Full ARMG Operational Trade-Off Profile. Demonstrates the observed operational trade-offs of Full ARMG relative to stateless self-correction: a 34.38% reduction in repair iterations, 5.30% token reduction, and +4.00 percentage points in execution success, balanced against a 19.79% latency overhead, with relational accuracy remaining identical (0.00 pp).*
+*Fig. 5. Mode 2 vs. Full ARMG Operational Trade-Off Profile. Demonstrates the observed operational trade-offs of Full ARMG relative to stateless self-correction across repeated executions: +33.33% in repair retries, +19.68% in token consumption, and +39.73% in latency overhead, with execution success (96.00%) and relational accuracy (68.00%) remaining identical.*
 
-- **Repair Iteration Efficiency**: Mode 4 achieved a **34.38% reduction in mean repair iterations** (0.28 vs. 0.43 retries per query), observed consistently across all three runs (Seed 42: 0.28 vs. 0.44; Seed 123: 0.28 vs. 0.44; Seed 999: 0.28 vs. 0.40).
-- **Token Expenditure**: Mode 4 consumed **5.30% fewer tokens** (542.37 vs. 572.72 tokens per query) by avoiding repetitive repair prompt/completion cycles.
-- **PostgreSQL Execution Success**: Mode 4 achieved **96.00% execution success** vs. 92.00% for Mode 2 (+4.00 percentage points; 24/25 vs. 23/25 queries).
-- **Latency Overhead**: Mode 4 incurred a **19.79% end-to-end latency penalty** (8,564.89 ms vs. 7,149.68 ms), consistent with the additional embedding, retrieval, and state-graph orchestration stages.
-- **Relational Accuracy Plateau**: Both Mode 4 and Mode 2 achieved exactly **68.00% relational execution accuracy** (17 of 25 queries correct).
+- **Repair Iterations**: Mode 4 required **0.37 ± 0.05 retries** vs. Mode 2's **0.28 ± 0.00 retries** (+33.33% / +0.09 retries per query), observed across repeated runs (Seed 42: 0.32 vs. 0.28; Seed 123: 0.40 vs. 0.28; Seed 999: 0.40 vs. 0.28).
+- **Token Expenditure**: Mode 4 consumed **19.68% more tokens** (602.85 vs. 503.72 tokens per query) due to few-shot operational memory context injection in prompt assembly.
+- **PostgreSQL Execution Success**: Both Mode 4 and Mode 2 achieved **96.00% execution success** (72/75 queries; 24/25 per seed), recovering 16.00 pp over the zero-shot baseline (80.00%).
+- **Latency Overhead**: Mode 4 incurred a **39.73% end-to-end latency penalty** (9,000.59 ms vs. 6,441.56 ms), consistent with the additional embedding generation, FAISS retrieval, and state-graph orchestration stages.
+- **Relational Accuracy Plateau**: Both Mode 4 and Mode 2 achieved exactly **68.00% relational execution accuracy** (51/75 queries correct across seeds; 17/25 correct per seed).
 
 ### 10.3 Query-Level Divergence Analysis
-Across all 25 queries, Mode 4 and Mode 2 differed on exactly two queries:
-1. **Query Q08 (Category B — Join Aggregation)**: Mode 2 failed on Attempt 1 and required a repair retry (mean 0.67 retries across runs). Mode 4 retrieved memory admitted during Q04 and executed cleanly on Attempt 1 without retries (`retries = 0`).
-2. **Query Q19 (Category C — Percentage Contribution)**: Mode 2 encountered a `GROUP BY` syntax error, exhausted all 3 retries, and failed (`retries = 3`, `is_success = False`). Mode 4 retrieved memory admitted during Q13 and generated executable SQL on Attempt 1 (`retries = 0`, `is_success = True`).
-3. **Remaining 23 Queries**: Exhibited identical execution outcomes across both modes.
+Across all 25 queries, Mode 4 and Mode 2 exhibited retry divergence on exactly two queries:
+1. **Query Q08 (Category B — Join Aggregation)**: Mode 2 executed cleanly on Attempt 1 without retries (`retries = 0`) across all 3 seeds. Mode 4 retrieved memory admitted during Q04, encountered an initial syntax error on Attempt 1, and required 1 repair retry before succeeding on Attempt 2 (`retries = 1`) across all 3 seeds (+1 retry in Mode 4).
+2. **Query Q19 (Category C — Percentage Contribution)**: Mode 2 executed cleanly on Attempt 1 without retries (`retries = 0`) across all 3 seeds. Mode 4 executed on Attempt 1 in Seed 42 (`retries = 0`), but in Seeds 123 and 999 retrieved memory and required 2 repair retries before succeeding on Attempt 3 (`retries = 2`, +2 retries in Mode 4).
+3. **Query Q11 (Category B — Join on Market Type)**: Failed persistently across all 3 seeds in both Mode 2 and Mode 4 (exhausted 3 retries, `is_success = False`).
+4. **Remaining 22 Queries**: Exhibited identical retry counts across both modes, and all 25 queries exhibited identical relational accuracy outcomes across modes.
 
 ---
 
 ## 11. Memory Retrieval and Lifecycle Analysis
 
 ### 11.1 Remediation of Vector Geometry
-In historical pre-remediation testing, raw unnormalized embeddings generated by `nomic-embed-text` had norms $\|\mathbf{v}\| \approx 19.8$, resulting in squared L2 distances $d^2 \approx 280$ and similarity scores $S = \frac{1}{1 + d^2} \approx 0.0035 \ll 0.50$. Consequently, zero retrievals occurred across all queries. Enforcing Unit-L2 normalization restored the intended similarity geometry, yielding 16 retrieval events across 12 distinct queries ($48.0\%$ benchmark coverage).
+In historical pre-remediation testing, raw unnormalized embeddings generated by `nomic-embed-text` had norms $\|\mathbf{v}\| \approx 19.8$, resulting in squared L2 distances $d^2 \approx 280$ and an analytically derived similarity baseline of $S = \frac{1}{1 + d^2} \approx 0.0035 \ll 0.50$. Consequently, zero retrievals occurred across all queries. Enforcing Unit-L2 normalization restored the intended similarity geometry, yielding 16 empirical retrieval events across 12 distinct queries ($48.0\%$ benchmark coverage).
 
-Fig. 3 illustrates the empirical distribution of FAISS retrieval similarity scores before and after embedding normalization, demonstrating the restoration of the intended geometric threshold $\tau = 0.50$.
+Fig. 3 illustrates empirical post-remediation retrieval telemetry alongside the derived pre-remediation baseline, demonstrating the restoration of the intended geometric threshold $\tau = 0.50$.
 
-![Figure 3: Pre-Remediation vs. Post-Remediation FAISS Retrieval Geometry](figures/png/fig3_retrieval_geometry.png)
-*Fig. 3. Pre-Remediation vs. Post-Remediation FAISS Retrieval Geometry. Left: Unnormalized `nomic-embed-text` embeddings generated large norms ($\|\mathbf{v}\| \approx 19.8$), driving all similarity scores to $S \approx 0.0035 \ll \tau = 0.50$ (zero retrievals). Right: Unit-$L_2$ normalization restored proper inner-product geometry, elevating 16 retrieval events above threshold $\tau = 0.50$ across 12 distinct queries ($48.0\%$ coverage).*
+![Figure 3: Empirical Post-Remediation Retrieval Telemetry with Derived Pre-Remediation Baseline](figures/png/fig3_retrieval_geometry.png)
+*Fig. 3. Empirical Post-Remediation Retrieval Telemetry with Derived Pre-Remediation Baseline. Left: Unnormalized `nomic-embed-text` embeddings generated large norms ($\|\mathbf{v}\| \approx 19.8$), yielding a derived non-empirical baseline of $S \approx 0.0035 \ll \tau = 0.50$ (zero retrievals). Right: Unit-$L_2$ normalization restored proper inner-product geometry, elevating 16 real empirical retrieval events above threshold $\tau = 0.50$ across 12 distinct queries ($48.0\%$ coverage).*
 
 ### 11.2 Lifecycle Metrics and Deduplication
 - **New Admissions**: Exactly 3 memories were admitted across all runs:
-  - `Q04`: Admitted join pattern for `dim_geography` (`mem-Q04`).
-  - `Q13`: Admitted multi-table join and aggregation pattern (`mem-Q13`).
-  - `Q15`: Admitted window aggregation structure (`mem-Q15`).
-- **Reinforcement & Deduplication on `Q17`**: Query `Q17` retrieved all 3 stored memories, applied `mem-Q13` during repair, and succeeded on Attempt 2. The governance engine reinforced `mem-Q13` and suppressed new admission under the mutual-exclusion invariant.
-- **Store Stability**: Store size remained strictly invariant at **3 memories** from Q15 through Q25 across all three runs, confirming that mutual exclusion prevented duplicate accumulation. In contrast, Naive Vector RAG (Mode 3) accumulated 23 unmanaged entries.
+  - Memory admitted following `Q04`: Join pattern for `dim_geography`.
+  - Memory admitted following `Q13`: Multi-table join and aggregation pattern.
+  - Memory admitted following `Q15`: Window aggregation structure.
+- **Reinforcement & Mutual Exclusion**: Memory-backed repair and reinforcement occurred across 8 events in the 3-seed benchmark: `Q08` triggered memory-backed repair and reinforcement across all three seeds (reinforcing the memory admitted following `Q04`); `Q17` triggered memory-backed repair and reinforcement across all three seeds (reinforcing the memory admitted following `Q13`); and `Q19` triggered memory-backed repair and reinforcement in seeds 123 and 999 (reinforcing the memory admitted following `Q15`). In all 8 events, the governance engine reinforced existing memory and suppressed new admission under the algorithmic mutual-exclusion invariant.
+- **Store Stability**: The persistent store-size trajectory remained deterministically identical at $0 \to 1 \to 2 \to 3$ across all three seeds despite seed-specific reinforcement distributions, holding strictly invariant at **3 memories** from Q15 through Q25. This confirms that mutual exclusion prevented duplicate accumulation. In contrast, Naive Vector RAG (Mode 3) accumulated 23 unmanaged entries.
 
 Fig. 6 illustrates the cumulative persistent memory store growth across the sequential benchmark queries, comparing Full ARMG against Naive Vector RAG.
 
@@ -421,14 +421,14 @@ Table III: PostgreSQL Execution Success vs. Relational Semantic Accuracy Across 
 
 | Experimental Mode | PostgreSQL Execution Success (%) | Relational Semantic Accuracy (%) | Discrepancy Gap (pp) |
 | :--- | :---: | :---: | :---: |
-| Mode 1 (Zero-Shot) | 76.00 | 57.33 | 18.67 |
-| Mode 2 (Stateless Self-Correction) | 92.00 | 68.00 | 24.00 |
+| Mode 1 (Zero-Shot) | 80.00 | 60.00 | 20.00 |
+| Mode 2 (Stateless Self-Correction) | 96.00 | 68.00 | 28.00 |
 | Mode 3 (Naive Vector RAG) | 92.00 | 68.00 | 24.00 |
 | Mode 4 (Full ARMG) | 96.00 | 68.00 | 28.00 |
 | Mode 5 (ARMG − Neg Constraints) | 96.00 | 68.00 | 28.00 |
-| Mode 6 (ARMG with $\lambda=0.0$) | 94.67 | 68.00 | 26.67 |
+| Mode 6 (ARMG with $\lambda=0.0$) | 96.00 | 68.00 | 28.00 |
 
-*\*Discrepancy Gap is defined as $\text{ExecSucc} - \text{ExecAcc}$ in percentage points (pp).*
+*\*Discrepancy Gap is defined as $\text{ExecSucc} - \text{ExecAcc}$ in percentage points (pp). Dynamically derived from raw benchmark run logs.*
 
 ### Analysis of the 7 Divergent Queries in Mode 4
 Exactly seven queries executed cleanly against PostgreSQL (`is_success = True`) but failed relational semantic equivalence (`execution_accuracy = 0`) across all three seeds. A detailed forensic breakdown of these seven divergent queries in Mode 4 is presented in Table IX, cataloging the specific SQL construct deviations and comparator diagnostic rationales.
@@ -463,10 +463,8 @@ In the evaluated Qwen2.5 7B configuration, relational execution accuracy plateau
 ## 14. Ablation Analysis
 
 ### 14.1 Negative Constraints Ablation (Mode 4 vs. Mode 5)
-Removing negative constraints increased mean retries from 0.28 to 0.36 (+28.57%). Query-level inspection reveals that this entire difference was localized to **Query `Q19`**:
-- In Mode 4 (with negative constraints), the model avoided invalid grouping constructs and executed on Attempt 1 (`retries = 0`).
-- In Mode 5 (without negative constraints), Attempt 1 repeated an invalid grouping construct, requiring 2 repair retries (`retries = 2`).
-- *Finding*: Negative constraints were associated with fewer repair iterations in the evaluated ablation, with the observed difference localized to Q19. Broad generalization across all query types was not demonstrated.
+In the negative constraints ablation (Mode 5), diagnostic negative constraints were omitted from repair prompts. Mean retries were 0.32 ± 0.00 in Mode 5 vs 0.37 ± 0.05 in Mode 4, while execution success (96.00%) and relational accuracy (68.00%) remained identical. In the absence of negative constraint pruning, Mode 5 admitted one additional memory (final store size = 4 vs 3 in Mode 4).
+- *Finding*: Diagnostic negative constraints provided structured token exclusion, while overall execution success rates were identical across modes on the evaluated benchmark.
 
 ### 14.2 Temporal Decay Ablation (Mode 4 vs. Mode 6)
 Mode 6 ($\lambda = 0.0$) exhibited identical final store sizes (3 memories) and retrieval counts (16 retrievals) to Mode 4. Because the 25 benchmark queries execute in continuous sequence within ~3.5 minutes ($\Delta t \approx 0.002$ days), exponential decay factor $\exp(-\lambda \Delta t) \approx 0.9999$ was insufficient to age memories.
@@ -477,21 +475,19 @@ Mode 6 ($\lambda = 0.0$) exhibited identical final store sizes (3 memories) and 
 ## 15. Discussion
 
 ### 15.1 What Improved
-- **Repair Efficiency**: ARMG reduced mean repair retries by 34.38% (0.28 vs. 0.43 retries per query), avoiding repetitive repair cycling on known schema patterns.
-- **Token Economy**: Bounded repair behavior achieved a 5.30% reduction in mean token expenditure (542.37 vs. 572.72 tokens).
-- **Execution Success**: PostgreSQL execution success improved from 92.00% to 96.00%, recovering an executable query on Q19.
+- **Execution Recovery & Accuracy Parity**: Both Mode 2 and Mode 4 recovered PostgreSQL execution success to 96.00% (72/75 queries) from 80.00% in Mode 1, and relational accuracy to 68.00% from 60.00% in Mode 1.
 - **Memory Lifecycle Control**: In the evaluated sequential workflow, algorithmic mutual exclusion maintained store size invariant at 3 memories, preventing the duplicate accumulation observed in unmanaged RAG (which expanded to 23 entries).
 - **Verified Execution Safety**: Pre-execution AST containment successfully intercepted all tested destructive statements across unit and benchmark evaluations.
 
 ### 15.2 What Did Not Improve
 - **Relational Execution Accuracy**: Mode 4 and Mode 2 tied identically at 68.00% relational execution accuracy. Operational memory provided operational and syntactic guidance, but did not elevate the 7B model's intrinsic semantic reasoning capacity on complex window functions.
 
-### 15.3 Architectural Cost: Latency Overhead
-- ARMG incurred a **19.79% end-to-end latency penalty** (8,564.89 ms vs. 7,149.68 ms). This represents a direct architectural trade-off: ARMG trades wall-clock orchestration overhead for repair iteration efficiency, token economy, and pre-execution safety.
+### 15.3 Architectural Cost: Latency and Token Overhead
+- ARMG incurred a **39.73% end-to-end latency penalty** (9,000.59 ms vs. 6,441.56 ms), a **19.68% increase in tokens** (602.85 vs. 503.72 tokens), and a **33.33% increase in repair retries** (0.37 vs. 0.28). This represents a direct architectural trade-off: vector embedding generation, FAISS retrieval, and state-graph orchestration introduce computational overhead and prompt-context length expansions, while providing verified execution safety and strictly bounded store growth.
 
 ### 15.4 What Remains Untested
 - **Long-Term Temporal Decay**: Real-time continuous decay over multi-week or multi-month operational epochs remains experimentally unexercised.
-- **Causal Memory Attribution**: While observational associations were verified on Q08 and Q19, establishing formal causal proof requires counterfactual memory-masking interventions.
+- **Causal Memory Attribution**: While observational associations were documented on queries with retrieval events (such as Q08 and Q19), establishing formal causal attribution of retrieval effects on generation and repair requires controlled counterfactual memory-masking interventions.
 - **Broader Generalization**: Performance across larger models (70B+) and public multi-schema benchmarks (Spider, BIRD) remains to be established.
 
 ---
@@ -520,7 +516,7 @@ Mode 6 ($\lambda = 0.0$) exhibited identical final store sizes (3 memories) and 
 
 ## 18. Future Work
 1. **Synthetic Epoch Advance Decay Experiment**: Augment evaluation with simulated multi-month time jumps to evaluate continuous exponential decay and archival pruning.
-2. **Counterfactual Memory Intervention**: Execute controlled A/B testing dynamically masking retrieved memories for Q08 and Q19 to establish formal causal proof of memory-driven repair.
+2. **Counterfactual Memory Intervention**: Execute controlled A/B testing dynamically masking retrieved memories for queries with retrieval events (including Q08 and Q19) to isolate the causal impact of injected exemplars on downstream generation and retry counts.
 3. **Frontier Model Evaluation**: Evaluate ARMG with larger models (Llama-3-70B, Qwen-2.5-72B) to assess whether higher reasoning capacity breaks the 68.00% semantic window-function ceiling.
 4. **Academic Benchmark Evaluation**: Port ARMG to Spider and BIRD benchmarks to establish comparative performance against published literature leaders.
 5. **Concurrent Throughput Testing**: Benchmark FAISS retrieval and database connection pooling under concurrent multi-user query load.
@@ -528,7 +524,7 @@ Mode 6 ($\lambda = 0.0$) exhibited identical final store sizes (3 memories) and 
 ---
 
 ## 19. Conclusion
-This paper presented Adaptive Runtime Memory Governance (ARMG), an operational knowledge framework for local Text-to-SQL systems. Across 450 experimental evaluations, ARMG demonstrated verified retrieval restoration, mutual-exclusion duplicate suppression, verified pre-execution safety containment, an observed 34.38% reduction in repair loop iterations, and a 5.30% reduction in token consumption compared to stateless self-correction. Simultaneously, the evaluation established that ARMG incurs a 19.79% latency overhead and does not overcome the baseline semantic accuracy plateau of 7B language models on complex window queries. ARMG provides a principled, governed operational memory architecture for enterprise Text-to-SQL systems prioritizing safety and repair efficiency.
+This paper presented Adaptive Runtime Memory Governance (ARMG), an operational knowledge framework for local Text-to-SQL systems. Across 450 experimental evaluations, ARMG demonstrated verified retrieval restoration, mutual-exclusion duplicate suppression, verified pre-execution safety containment, and execution recovery to 96.00% execution success and 68.00% relational accuracy matching stateless self-correction. Simultaneously, the evaluation established that ARMG incurs a 39.73% latency overhead, a 33.33% increase in repair retries, and a 19.68% increase in token expenditure due to state-graph orchestration and memory prompt injection, without overcoming the baseline semantic accuracy plateau of 7B language models on complex window queries. ARMG provides a principled, governed operational memory architecture for enterprise Text-to-SQL systems prioritizing safety and bounded store lifecycle control.
 
 ---
 

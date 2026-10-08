@@ -1,33 +1,37 @@
 """
 Figure 4: PostgreSQL Execution Success vs. Relational Execution Accuracy Across All Six Experimental Modes.
-Loads exact mean values from Table II and evidence_package.md.
+Dynamically derives mean values and sample standard deviations from raw benchmark run CSVs
+via benchmark.analysis.compute_benchmark_metrics().
 Generates publication-quality SVG and 300-DPI PNG.
+Per Audit 1 Remediation Item REM-P0-02.
 """
 import os
+import sys
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-def generate_fig4():
-    os.makedirs('manuscript/figures/png', exist_ok=True)
-    os.makedirs('manuscript/figures/svg', exist_ok=True)
+# Ensure repository root is on sys.path for direct script invocation
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
+from benchmark.analysis import compute_benchmark_metrics, MODE_LABELS
+
+def generate_fig4(csv_paths=None, output_png='manuscript/figures/png/fig4_execsucc_execacc.png', output_svg='manuscript/figures/svg/fig4_execsucc_execacc.svg'):
+    os.makedirs(os.path.dirname(output_png) or '.', exist_ok=True)
+    os.makedirs(os.path.dirname(output_svg) or '.', exist_ok=True)
     
-    modes = [
-        "Mode 1\n(Zero-Shot)",
-        "Mode 2\n(Stateless Self-Corr)",
-        "Mode 3\n(Naive RAG)",
-        "Mode 4\n(Full ARMG)",
-        "Mode 5\n(ARMG − NegConst)",
-        "Mode 6\n(ARMG with λ=0)"
-    ]
+    # Programmatic metrics calculation directly from raw benchmark CSVs
+    metrics_df = compute_benchmark_metrics(csv_paths=csv_paths)
     
-    # Frozen values from Table II (evidence_package.md Section D)
-    exec_succ = [76.00, 92.00, 92.00, 96.00, 96.00, 94.67]
-    exec_acc  = [57.33, 68.00, 68.00, 68.00, 68.00, 68.00]
+    modes = [MODE_LABELS.get(m, m) for m in metrics_df["mode"]]
+    exec_succ = metrics_df["exec_succ"].tolist()
+    exec_acc  = metrics_df["exec_acc"].tolist()
+    succ_err  = metrics_df["succ_std"].tolist()
+    acc_err   = metrics_df["acc_std"].tolist()
     gaps      = [s - a for s, a in zip(exec_succ, exec_acc)]
-    
-    # Sample standard deviations over n=3 repeated runs
-    succ_err = [0.00, 0.00, 0.00, 0.00, 0.00, 2.31]
-    acc_err  = [2.31, 0.00, 0.00, 0.00, 0.00, 0.00]
     
     x = np.arange(len(modes))
     width = 0.35
@@ -67,14 +71,15 @@ def generate_fig4():
     ax.grid(axis='y', linestyle=':', alpha=0.6)
     ax.legend(loc='upper left', fontsize=9, framealpha=0.95)
     
-    # Draw horizontal plateau guide at 68.00%
-    ax.axhline(68.00, color='#e74c3c', linestyle=':', linewidth=1.2, alpha=0.8)
-    ax.text(5.4, 69.0, 'Semantic Accuracy Plateau (68.00%)', ha='right', va='bottom',
+    # Draw horizontal plateau guide dynamically based on Mode 4 accuracy
+    plateau_val = metrics_df.loc[metrics_df["mode"].str.startswith("Mode 4"), "exec_acc"].values[0]
+    ax.axhline(plateau_val, color='#e74c3c', linestyle=':', linewidth=1.2, alpha=0.8)
+    ax.text(5.4, plateau_val + 1.0, f'Semantic Accuracy Plateau ({plateau_val:.2f}%)', ha='right', va='bottom',
             fontsize=7.5, color='#c0392b', fontweight='bold')
 
     plt.tight_layout()
-    plt.savefig('manuscript/figures/png/fig4_execsucc_execacc.png', dpi=300, bbox_inches='tight')
-    plt.savefig('manuscript/figures/svg/fig4_execsucc_execacc.svg', format='svg', bbox_inches='tight')
+    plt.savefig(output_png, dpi=300, bbox_inches='tight')
+    plt.savefig(output_svg, format='svg', bbox_inches='tight')
     plt.close()
     print("Fig 4 generated successfully: PNG and SVG.")
 

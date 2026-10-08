@@ -21,17 +21,52 @@ import pytest
 from agents.error_diagnosis import DeterministicErrorDiagnoser, DiagnosticResult
 from agents.taxonomy import TaxonomyCategory
 from environment.observation import ExecutionStatus, RuntimeObservation
-from environment.postgres import PostgreSQLEnvironment
-
-
 @pytest.fixture(scope="module")
 def star_schema_catalog():
-    """Fixture providing the live PostgreSQL warehouse schema catalog."""
-    env = PostgreSQLEnvironment()
-    try:
-        return env.inspect()
-    finally:
-        env.close()
+    """Deterministic in-memory Star Schema catalog for hermetic unit testing."""
+    return {
+        "tables": {
+            "dim_time": {
+                "columns": [
+                    {"name": "time_key", "type": "integer", "primary_key": True},
+                    {"name": "full_date", "type": "date"},
+                    {"name": "day_of_week", "type": "varchar"},
+                    {"name": "calendar_month", "type": "varchar"},
+                    {"name": "calendar_quarter", "type": "varchar"},
+                    {"name": "calendar_year", "type": "integer"},
+                ]
+            },
+            "dim_geography": {
+                "columns": [
+                    {"name": "geo_key", "type": "integer", "primary_key": True},
+                    {"name": "region", "type": "varchar"},
+                    {"name": "zone", "type": "varchar"},
+                    {"name": "market_type", "type": "varchar"},
+                ]
+            },
+            "dim_product": {
+                "columns": [
+                    {"name": "product_key", "type": "integer", "primary_key": True},
+                    {"name": "product_name", "type": "varchar"},
+                    {"name": "category", "type": "varchar"},
+                    {"name": "sub_category", "type": "varchar"},
+                    {"name": "unit_cost", "type": "numeric"},
+                ]
+            },
+            "fact_sales_performance": {
+                "columns": [
+                    {"name": "fact_key", "type": "integer", "primary_key": True},
+                    {"name": "time_key", "type": "integer"},
+                    {"name": "geo_key", "type": "integer"},
+                    {"name": "product_key", "type": "integer"},
+                    {"name": "units_sold", "type": "integer"},
+                    {"name": "gross_revenue", "type": "numeric"},
+                    {"name": "discount_applied", "type": "numeric"},
+                    {"name": "net_profit", "type": "numeric"},
+                ]
+            },
+        }
+    }
 
 
 @pytest.fixture

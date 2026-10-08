@@ -105,7 +105,7 @@ def generate_fig1():
 
     # Node 5: postgres_executor_node (Row 2, far right)
     draw_node(71.0, 43.0, 15.0, 15.0, "Node 5: PG Executor",
-              "Physical PostgreSQL 16\nRead-Only Transaction\nCapture Rows / Stderr",
+              "Physical PostgreSQL 18.1\nRead-Only Transaction\nCapture Rows / Stderr",
               c_exec_bg, c_exec_border, title_color='#096dd9')
 
     # Node 4 -> Node 6 (Safety Rejection -> Blocked Observation)

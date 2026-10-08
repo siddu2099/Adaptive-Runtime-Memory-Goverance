@@ -50,6 +50,7 @@ class ARMGState(TypedDict, total=False):
     runtime_knowledge: Optional[RuntimeKnowledge]
     retrieved_memories: List[RuntimeMemory]
     applied_memory_id: Optional[str]
+    repair_history: Optional[List[Dict[str, Any]]]
     repair_prompt: Optional[str]
     retry_count: int
     max_retries: int

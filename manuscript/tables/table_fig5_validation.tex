@@ -7,12 +7,12 @@
 \toprule
 \textbf{Evaluation Metric} & \textbf{Mode 2} & \textbf{Mode 4} & \textbf{Figure Delta} & \textbf{Delta Type} & \textbf{Unit} \\
 \midrule
-Mean Repair Iterations & 0.43 & 0.28 & -34.38\% & Relative & retries/query \\
-Mean Token Expenditure & 572.72 & 542.37 & -5.30\% & Relative & tokens/query \\
-PostgreSQL Execution Success & 92.00\% & 96.00\% & +4.00~pp & Percentage points & pp \\
-End-to-End Latency & 7149.68 & 8564.89 & +19.79\% & Relative & ms \\
-Relational Execution Accuracy & 68.00\% & 68.00\% & 0.00~pp & Percentage points & pp \\
+Mean Repair Iterations & 0.28 & 0.37 & +33.33\% & Relative & retries/query \\
+Mean Token Expenditure & 503.72 & 602.85 & +19.68\% & Relative & tokens/query \\
+PostgreSQL Execution Success & 96.00\% & 96.00\% & +0.00~pp & Percentage points & pp \\
+End-to-End Latency & 6,441.56 & 9,000.59 & +39.73\% & Relative & ms \\
+Relational Execution Accuracy & 68.00\% & 68.00\% & +0.00~pp & Percentage points & pp \\
 \bottomrule
-\multicolumn{6}{p{8.3cm}}{\scriptsize \textsuperscript{*}Primary source: \texttt{benchmark/seed*/benchmark\_results.csv}, Table~II, Table~VIII, and \texttt{manuscript/figures/source/fig5\_tradeoff.py}. Mean values represent 75 queries evaluated per mode across seeds 42, 123, and 999. In strict accordance with IEEE scientific reporting conventions, efficiency shifts for rate metrics (retries, tokens, latency) are reported as relative percentage changes (\%), whereas probability metrics bounded in $[0, 100]$ (execution success, semantic accuracy) are reported as arithmetic percentage-point differences (pp). Relative retry reduction unrounded: $(0.280000 - 0.426667)/0.426667 = -34.375\% \approx -34.38\%$. Relative token reduction: $(542.373333 - 572.720000)/572.720000 = -5.30\%$.} \\
+\multicolumn{6}{p{8.3cm}}{\scriptsize \textsuperscript{*}Primary source: \texttt{benchmark/seed*/benchmark\_results.csv}, Table~II, Table~VIII, and \texttt{manuscript/figures/source/fig5\_tradeoff.py}. Mean values represent 75 queries evaluated per mode across seeds 42, 123, and 999. In strict accordance with IEEE scientific reporting conventions, efficiency shifts for rate metrics (retries, tokens, latency) are reported as relative percentage changes (\%), whereas probability metrics bounded in $[0, 100]$ (execution success, semantic accuracy) are reported as arithmetic percentage-point differences (pp).} \\
 \end{tabular}
 \end{table}

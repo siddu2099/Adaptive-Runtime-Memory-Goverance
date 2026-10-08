@@ -193,8 +193,8 @@ class TestFAISSSimilarityGeometry:
         assert abs(dist - expected_l2_sq) < 1e-4
         assert abs(sim - expected_sim) < 1e-4
 
-        # For cosine similarity > 0.70, converted similarity must exceed the 0.50 retrieval threshold
-        if cos_sim >= 0.70:
+        # For cosine similarity >= 0.50, converted similarity must exceed the 0.50 retrieval threshold
+        if cos_sim >= 0.50:
             assert sim >= 0.50, f"Expected similarity >= 0.50, got {sim}"
 
 

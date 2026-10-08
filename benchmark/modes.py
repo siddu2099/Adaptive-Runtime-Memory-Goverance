@@ -35,9 +35,11 @@ from graph.state import (
 )
 
 
-def create_initial_armg_state(user_query: str, max_retries: int = 3) -> Dict[str, Any]:
+def create_initial_armg_state(user_query: str, max_retries: int = 3, **kwargs) -> Dict[str, Any]:
     """Helper to initialize the input state dictionary for the ARMG StateGraph."""
-    return {"user_query": user_query, "max_retries": max_retries}
+    state = {"user_query": user_query, "max_retries": max_retries}
+    state.update(kwargs)
+    return state
 
 from graph.workflow import ARMGRepairWorkflow, default_embed_fn
 from memory.governance import MemoryGovernanceEngine
@@ -119,6 +121,24 @@ class NaiveVectorStore:
                 results.append((q, s, float(sim)))
         return results
 
+    def search_raw_candidates(self, embedding: List[float], top_k: int = 3) -> List[Tuple[str, str, int, float, float]]:
+        """Return raw candidate tuples: (question, sql, rank, raw_inner_product, cosine_similarity)."""
+        if self.count() == 0:
+            return []
+        vec = np.array([embedding], dtype=np.float32)
+        norm = np.linalg.norm(vec)
+        if norm > 0:
+            vec = vec / norm
+        k = min(top_k, self.count())
+        scores, indices = self.index.search(vec, k)
+        results = []
+        for rank_idx, (sim, idx) in enumerate(zip(scores[0], indices[0]), 1):
+            if idx != -1 and idx < len(self.records):
+                q, s = self.records[idx]
+                score = float(sim)
+                results.append((q, s, rank_idx, score, score))
+        return results
+
 
 # ==============================================================================
 # Mode 5: Ablation Workflow (Without Negative Constraints)
@@ -190,7 +210,7 @@ def execute_mode_1_zero_shot(
     validator: Optional[ExecutionValidator] = None,
 ) -> QueryBenchmarkRecord:
     """Mode 1: Monolithic Zero-Shot Baseline."""
-    generator = generator or SQLGenerator()
+    generator = generator or SQLGenerator(seed=seed)
     introspector = introspector or SchemaIntrospector(env)
     pruner = pruner or SchemaPruner()
     validator = validator or ExecutionValidator()
@@ -303,8 +323,8 @@ def execute_mode_2_self_correction(
     max_retries: int = 3,
 ) -> QueryBenchmarkRecord:
     """Mode 2: Stateless Self-Correction Baseline."""
-    generator = generator or SQLGenerator()
-    repair_generator = repair_generator or RepairSQLGenerator()
+    generator = generator or SQLGenerator(seed=seed)
+    repair_generator = repair_generator or RepairSQLGenerator(seed=seed)
     introspector = introspector or SchemaIntrospector(env)
     pruner = pruner or SchemaPruner()
     validator = validator or ExecutionValidator()
@@ -452,7 +472,7 @@ def execute_mode_3_naive_rag(
     validator: Optional[ExecutionValidator] = None,
 ) -> QueryBenchmarkRecord:
     """Mode 3: Naive Vector RAG Baseline."""
-    generator = generator or SQLGenerator()
+    generator = generator or SQLGenerator(seed=seed)
     introspector = introspector or SchemaIntrospector(env)
     pruner = pruner or SchemaPruner()
     validator = validator or ExecutionValidator()
@@ -474,14 +494,50 @@ def execute_mode_3_naive_rag(
     few_shot_examples = ""
     query_vec = embed_fn(question) if embed_fn else None
 
-    if query_vec is not None and naive_store.count() > 0:
-        matches = naive_store.search(query_vec, top_k=3)
-        retrieved_count = len(matches)
-        if matches:
+    from memory.telemetry import get_telemetry_logger
+    t_logger = get_telemetry_logger()
+    store_size_before = naive_store.count()
+
+    if query_vec is not None and store_size_before > 0:
+        raw_candidates = naive_store.search_raw_candidates(query_vec, top_k=3)
+        retrieved_count = len(raw_candidates)
+        cand_dicts = []
+        if raw_candidates:
             ex_lines = []
-            for i, (m_q, m_s, score) in enumerate(matches, 1):
-                ex_lines.append(f"Example {i}:\nQuestion: {m_q}\nSQL:\n```sql\n{m_s}\n```")
+            for m_q, m_s, rank_idx, raw_ip, cosine_sim in raw_candidates:
+                ex_lines.append(f"Example {rank_idx}:\nQuestion: {m_q}\nSQL:\n```sql\n{m_s}\n```")
+                cand_dicts.append({
+                    "memory_id": f"naive_doc_{rank_idx}",
+                    "rank": rank_idx,
+                    "raw_inner_product": raw_ip,
+                    "cosine_similarity": cosine_sim,
+                    "passed_retrieval_threshold": bool(cosine_sim >= 0.50),
+                })
             few_shot_examples = "\n\n### RELEVANT PREVIOUS EXAMPLES:\n" + "\n\n".join(ex_lines)
+        if t_logger:
+            t_logger.log_retrieval_event(
+                run_id=run_id,
+                mode="Mode 3 (Naive Vector RAG)",
+                query_id=qid,
+                candidates=cand_dicts,
+                retrieval_count=retrieved_count,
+                accepted_memory_count=retrieved_count,
+                store_size_before=store_size_before,
+                top_k=3,
+                threshold=0.50,
+            )
+    elif store_size_before == 0 and t_logger:
+        t_logger.log_retrieval_event(
+            run_id=run_id,
+            mode="Mode 3 (Naive Vector RAG)",
+            query_id=qid,
+            candidates=[],
+            retrieval_count=0,
+            accepted_memory_count=0,
+            store_size_before=0,
+            top_k=3,
+            threshold=0.50,
+        )
 
     # Prompt with raw few-shot examples
     prompt_schema_with_rag = schema_md + few_shot_examples
@@ -518,6 +574,13 @@ def execute_mode_3_naive_rag(
                 fail_reason = exec_res.error
                 obs_dict = env.observe(exec_res.error or "")
                 error_cat = obs_dict.get("error_class", "DatabaseError")
+
+    if t_logger:
+        t_logger.update_store_size_after_query(
+            query_id=qid,
+            mode="Mode 3 (Naive Vector RAG)",
+            store_size_after=naive_store.count(),
+        )
 
     total_latency_ms = round((time.perf_counter() - start_time) * 1000.0, 3)
 
@@ -574,6 +637,7 @@ def execute_mode_4_full_armg(
     seed: int,
     workflow_app: Any,
     max_retries: int = 3,
+    mode_label: str = "Mode 4 (Full ARMG)",
 ) -> QueryBenchmarkRecord:
     """Mode 4: Full ARMG Architecture."""
     question = query_item["question"]
@@ -583,7 +647,12 @@ def execute_mode_4_full_armg(
 
     start_time = time.perf_counter()
 
-    initial_state = create_initial_armg_state(user_query=question, max_retries=max_retries)
+    initial_state = create_initial_armg_state(
+        user_query=question,
+        max_retries=max_retries,
+        query_id=qid,
+        telemetry={"run_id": run_id, "mode": mode_label, "query_id": qid},
+    )
     final_state = workflow_app.invoke(initial_state)
 
     total_latency_ms = round((time.perf_counter() - start_time) * 1000.0, 3)
@@ -628,7 +697,7 @@ def execute_mode_4_full_armg(
 
     return QueryBenchmarkRecord(
         run_id=run_id,
-        mode="Mode 4 (Full ARMG)",
+        mode=mode_label,
         seed=seed,
         query_id=qid,
         category=category,
@@ -662,16 +731,15 @@ def execute_mode_5_armg_no_neg_constraints(
     max_retries: int = 3,
 ) -> QueryBenchmarkRecord:
     """Mode 5: Ablation - ARMG without Negative Constraints."""
-    rec = execute_mode_4_full_armg(
+    return execute_mode_4_full_armg(
         query_item=query_item,
         env=env,
         run_id=run_id,
         seed=seed,
         workflow_app=workflow_app,
         max_retries=max_retries,
+        mode_label="Mode 5 (ARMG - Negative Constraints)",
     )
-    rec.mode = "Mode 5 (ARMG - Negative Constraints)"
-    return rec
 
 
 def execute_mode_6_armg_no_decay(
@@ -683,13 +751,12 @@ def execute_mode_6_armg_no_decay(
     max_retries: int = 3,
 ) -> QueryBenchmarkRecord:
     """Mode 6: Ablation - ARMG without Temporal Decay (lambda=0)."""
-    rec = execute_mode_4_full_armg(
+    return execute_mode_4_full_armg(
         query_item=query_item,
         env=env,
         run_id=run_id,
         seed=seed,
         workflow_app=workflow_app,
         max_retries=max_retries,
+        mode_label="Mode 6 (ARMG - Temporal Decay)",
     )
-    rec.mode = "Mode 6 (ARMG - Temporal Decay)"
-    return rec

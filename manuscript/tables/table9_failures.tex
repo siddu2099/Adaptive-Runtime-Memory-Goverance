@@ -14,6 +14,6 @@ Q18 & C & Success & False & Ranked globally without \texttt{PARTITION BY categor
 Q19 & C & Success & False & Omitted base revenue column and rounding format & Projection signature and decimal precision discrepancy \\
 Q25 & D & Success & False & Inverted column sequence: \texttt{(market, profit, rev)} & Positional tuple attribute mismatch against gold signature \\
 \hline
-\multicolumn{6}{l}{\footnotesize \textsuperscript{*}Q05 executed cleanly on PostgreSQL but failed because the comparator enforces strict positional matching when gold SQL specifies ordering.} \\
+\multicolumn{6}{l}{\footnotesize \textsuperscript{*}Identified dynamically from evaluations where physical execution succeeded but relational semantic accuracy failed.} \\
 \end{tabular}
 \end{table*}

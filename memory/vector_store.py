@@ -125,10 +125,10 @@ class FAISSMemoryStore:
             top_k: Number of nearest neighbors to retrieve.
             
         Returns:
-            List of tuples: (RuntimeMemory, l2_distance, normalized_similarity).
-            Semantic similarity is explicitly normalized from L2 distance:
-                similarity = 1.0 / (1.0 + l2_distance) in [0.0, 1.0].
-            Ties are broken deterministically by (l2_distance, memory_id).
+            List of tuples: (RuntimeMemory, distance_l2_sq, similarity).
+            Semantic similarity is explicitly transformed from squared L2 distance:
+                similarity = 1.0 / (1.0 + distance_l2_sq) in [0.0, 1.0].
+            Ties are broken deterministically by (distance_l2_sq, memory_id).
         """
         # Strictly validate query vector before any early return
         v_2d = self._validate_vector(query_vector)
@@ -150,15 +150,49 @@ class FAISSMemoryStore:
                 # Filter out deleted memories if any linger
                 if mem.status == MemoryState.DELETED:
                     continue
-                l2_dist = float(dist)
+                d2 = float(dist)
                 # Deterministic normalized similarity
-                sim = 1.0 / (1.0 + l2_dist)
+                sim = 1.0 / (1.0 + d2)
                 sim = max(0.0, min(1.0, round(sim, 6)))
-                results.append((mem, l2_dist, sim))
+                results.append((mem, d2, sim))
 
         # Deterministic sorting: ascending distance, then deterministic memory_id tie-break
         results.sort(key=lambda r: (r[1], r[0].memory_id))
         return results
+
+    def search_raw_candidates(
+        self,
+        query_vector: Union[np.ndarray, List[float]],
+        top_k: int = 5,
+    ) -> List[Tuple[RuntimeMemory, int, float, float]]:
+        """Perform search returning all raw candidates with rank before threshold or lifecycle filtering.
+        
+        Returns:
+            List of tuples: (RuntimeMemory, rank, distance_l2_sq, similarity)
+            where rank is 1-based, sorted ascending by distance_l2_sq (highest similarity first).
+        """
+        v_2d = self._validate_vector(query_vector)
+        if top_k <= 0 or self.index.ntotal == 0:
+            return []
+
+        k = min(top_k, self.index.ntotal)
+        distances, indices = self.index.search(v_2d, k)
+
+        raw_candidates = []
+        for dist, idx in zip(distances[0], indices[0]):
+            if idx == -1:
+                continue
+            int_id = int(idx)
+            if int_id in self._id_to_memory:
+                mem = self._id_to_memory[int_id]
+                d2 = float(dist)
+                sim = 1.0 / (1.0 + d2)
+                sim = max(0.0, min(1.0, round(sim, 6)))
+                raw_candidates.append((mem, d2, sim))
+
+        # Sorting: lowest distance first (highest similarity first)
+        raw_candidates.sort(key=lambda r: (r[1], r[0].memory_id))
+        return [(r[0], rank_idx, r[1], r[2]) for rank_idx, r in enumerate(raw_candidates, 1)]
 
     def delete(self, memory_id: str) -> bool:
         """Physically delete a memory from both the FAISS index and metadata store.
@@ -189,6 +223,21 @@ class FAISSMemoryStore:
         if int_id is None:
             return None
         return self._id_to_memory.get(int_id)
+
+    def update_memory(self, memory: RuntimeMemory) -> bool:
+        """Update in-memory metadata for an existing memory without re-embedding.
+        
+        Args:
+            memory: RuntimeMemory object with updated metadata.
+            
+        Returns:
+            True if memory was found and updated, False otherwise.
+        """
+        int_id = self._memory_id_to_int_id.get(memory.memory_id)
+        if int_id is None:
+            return False
+        self._id_to_memory[int_id] = memory
+        return True
 
     def count(self) -> int:
         """Return total active vector count in the FAISS index."""

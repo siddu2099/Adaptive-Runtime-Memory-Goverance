@@ -127,11 +127,13 @@ STRICT INSTRUCTIONS:
         model: Optional[str] = None,
         timeout: int = 60,
         generator_fn: Optional[Callable[[str], GenerationResult]] = None,
+        seed: Optional[int] = None,
     ):
         self.base_url = (base_url or OLLAMA_BASE_URL).rstrip("/")
         self.model = model or DEFAULT_LLM_MODEL
         self.timeout = timeout
         self.generator_fn = generator_fn
+        self.seed = seed
 
     def generate_repair(self, repair_prompt: str) -> GenerationResult:
         """Generate replacement SQL query for the given repair prompt.
@@ -146,14 +148,18 @@ STRICT INSTRUCTIONS:
             return self.generator_fn(repair_prompt)
 
         endpoint = f"{self.base_url}/api/generate"
+        options = {
+            "temperature": 0.0,
+        }
+        if self.seed is not None:
+            options["seed"] = self.seed
+
         payload = {
             "model": self.model,
             "prompt": repair_prompt,
             "system": self.SYSTEM_PROMPT,
             "stream": False,
-            "options": {
-                "temperature": 0.0,
-            },
+            "options": options,
         }
 
         start_time = time.perf_counter()

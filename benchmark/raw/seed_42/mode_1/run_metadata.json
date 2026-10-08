@@ -1,0 +1,17 @@
+{
+  "seed": 42,
+  "mode_slug": "mode_1",
+  "mode_full_name": "Mode 1 (Zero-Shot)",
+  "temperature": 0.0,
+  "llm_model": "qwen2.5:7b-instruct",
+  "embedding_model": "nomic-embed-text",
+  "database": "PostgreSQL 18.1",
+  "total_queries": 25,
+  "pg_successes": 20,
+  "rel_correct": 15,
+  "mean_retries": 0.0,
+  "mean_latency_ms": 4853.3,
+  "mean_tokens": 360.16,
+  "isolation_verified": true,
+  "memory_store_initialized_empty": true
+}

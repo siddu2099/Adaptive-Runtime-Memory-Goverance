@@ -10,11 +10,11 @@ Foundation Model & Local Ollama instance & \texttt{qwen2.5:7b-instruct} (7.61B p
 Inference Configuration & Greedy decoding & \texttt{temperature = 0.0}, \texttt{top\_p = 1.0} \\
 Embedding Model & Local Ollama instance & \texttt{nomic-embed-text} (768d, Unit-$L_2$ normalized) \\
 Vector Indexing Library & CPU Flat Index & FAISS \texttt{IndexIDMap2} wrapping \texttt{IndexFlatL2} \\
-Relational Data Warehouse & Physical container & PostgreSQL 16.2 on \texttt{localhost:5432} \\
+Relational Data Warehouse & Physical container & PostgreSQL 18.1 on \texttt{localhost:5432} \\
 Graph Orchestration & Directed state graph & LangGraph 0.2.x (\texttt{StateGraph} runtime) \\
 Static SQL Parser & AST guardrail & SQLGlot 25.x (Dialect: PostgreSQL) \\
 Execution Driver & Python DB-API 2.0 & \texttt{psycopg2-binary} 2.9.x \\
-Python Runtime Environment & Local Workstation & Python 3.11.9 (NVIDIA CUDA acceleration via Ollama) \\
+Python Runtime Environment & Local Workstation & Python 3.11.9 (venv) / Python 3.13.2 (system) \\
 \hline
 \end{tabular}
 \end{table}

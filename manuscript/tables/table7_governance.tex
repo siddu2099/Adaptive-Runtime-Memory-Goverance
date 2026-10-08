@@ -13,6 +13,6 @@ Failure Penalty & $C_{t+1} = \max(0.0, \, C_t \times (1.0 - \beta))$ & $\beta = 
 Continuous Decay & $C(t) = C_{\text{ref}} \times \exp(-\lambda \Delta t)$ & $\lambda = 0.05\text{ day}^{-1}$ & Exponential decay over time ($*$Unexercised) \\
 Mutual Exclusion & $\text{Reinforce}(M) \iff M_{\text{applied}} \neq \emptyset$; $\text{Admit}(K)$ otherwise & Mutually exclusive & Invariant preventing duplicate memory bloat \\
 \hline
-\multicolumn{4}{l}{\footnotesize \textsuperscript{*}Temporal decay is fully unit-tested in \texttt{tests/unit/test\_governance.py}, but unexercised under the 3.5-minute benchmark execution clock.} \\
+\multicolumn{4}{l}{\footnotesize \textsuperscript{*}Temporal decay is fully unit-tested in \texttt{tests/unit/test\_memory\_governance.py}, but unexercised under the static benchmark execution clock.} \\
 \end{tabular}
 \end{table*}

@@ -6,13 +6,13 @@
 \hline
 \textbf{Experimental Mode} & \textbf{ExecAcc (\%)} & \textbf{ExecSucc (\%)} & \textbf{Retries ($K$)} & \textbf{Latency (ms)} & \textbf{Tokens} & \textbf{Store Size} \\
 \hline
-Mode 1 (Zero-Shot) & $57.33 \pm 2.31$ & $76.00 \pm 0.00$ & $0.00 \pm 0.00$ & $5,087.73 \pm 210.33$ & $360.48 \pm 0.48$ & $0$ \\
-Mode 2 (Stateless Self-Correction) & $68.00 \pm 0.00$ & $92.00 \pm 0.00$ & $0.43 \pm 0.02$ & $7,149.68 \pm 231.65$ & $572.72 \pm 12.68$ & $0$ \\
-Mode 3 (Naive Vector RAG) & $68.00 \pm 0.00$ & $92.00 \pm 0.00$ & $0.00 \pm 0.00$ & $6,844.01 \pm 56.90$ & $558.28 \pm 0.00$ & $23$ \\
-Mode 4 (Full ARMG) & $68.00 \pm 0.00$ & $96.00 \pm 0.00$ & $0.28 \pm 0.00$ & $8,564.89 \pm 103.16$ & $542.37 \pm 0.02$ & $3$ \\
-Mode 5 (ARMG $-$ Neg Constraints) & $68.00 \pm 0.00$ & $96.00 \pm 0.00$ & $0.36 \pm 0.00$ & $8,941.28 \pm 108.68$ & $553.93 \pm 0.02$ & $3$ \\
-Mode 6 (ARMG with $\lambda = 0.0$) & $68.00 \pm 0.00$ & $94.67 \pm 2.31$ & $0.37 \pm 0.02$ & $9,036.97 \pm 178.55$ & $599.67 \pm 13.94$ & $3$ \\
+Mode 1 (Zero-Shot) & $60.00 \pm 0.00$ & $80.00 \pm 0.00$ & $0.00 \pm 0.00$ & $4,859.70 \pm 7.98$ & $360.57 \pm 0.37$ & $0$ \\
+Mode 2 (Stateless Self-Correction) & $68.00 \pm 0.00$ & $96.00 \pm 0.00$ & $0.28 \pm 0.00$ & $6,441.56 \pm 105.51$ & $503.72 \pm 0.42$ & $0$ \\
+Mode 3 (Naive Vector RAG) & $68.00 \pm 0.00$ & $92.00 \pm 0.00$ & $0.00 \pm 0.00$ & $6,776.25 \pm 34.40$ & $558.28 \pm 0.00$ & $23$ \\
+Mode 4 (Full ARMG) & $68.00 \pm 0.00$ & $96.00 \pm 0.00$ & $0.37 \pm 0.05$ & $9,000.59 \pm 184.33$ & $602.85 \pm 28.49$ & $3$ \\
+Mode 5 (ARMG - Negative Constraints) & $68.00 \pm 0.00$ & $96.00 \pm 0.00$ & $0.32 \pm 0.00$ & $8,768.48 \pm 100.30$ & $530.97 \pm 0.40$ & $4$ \\
+Mode 6 (ARMG - Temporal Decay) & $68.00 \pm 0.00$ & $96.00 \pm 0.00$ & $0.28 \pm 0.00$ & $8,507.98 \pm 73.15$ & $542.27 \pm 0.39$ & $3$ \\
 \hline
-\multicolumn{7}{l}{\footnotesize \textsuperscript{*}All reported figures represent mean $\pm$ sample standard deviation across three repeated executions under seeds 42, 123, and 999.} \\
+\multicolumn{7}{l}{\footnotesize \textsuperscript{*}All reported figures represent mean $\pm$ sample standard deviation across three repeated executions under seeds 42, 123, and 999. Derived dynamically from raw CSV benchmark run logs.} \\
 \end{tabular}
 \end{table*}

@@ -19,7 +19,7 @@ from streamlit.testing.v1 import AppTest
 
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 DASHBOARD_PATH = str(ROOT_DIR / "ui" / "dashboard.py")
-RENDER_TIMEOUT = 15  # generous timeout for cold imports in test runners
+RENDER_TIMEOUT = 30  # generous timeout for cold imports in test runners
 
 
 @pytest.fixture

@@ -1,0 +1,440 @@
+{
+  "Mode 1 (Zero-Shot)": {
+    "mode": "Mode 1 (Zero-Shot)",
+    "sample_size_seeds": 3,
+    "total_queries_evaluated": 75,
+    "per_seed_results": {
+      "42": {
+        "succ_count": 20,
+        "succ_pct": 80.0,
+        "acc_count": 15,
+        "acc_pct": 60.0,
+        "mean_retries": 0.0,
+        "mean_latency_ms": 4853.30232,
+        "mean_tokens": 360.16
+      },
+      "123": {
+        "succ_count": 20,
+        "succ_pct": 80.0,
+        "acc_count": 15,
+        "acc_pct": 60.0,
+        "mean_retries": 0.0,
+        "mean_latency_ms": 4857.15348,
+        "mean_tokens": 360.68
+      },
+      "999": {
+        "succ_count": 20,
+        "succ_pct": 80.0,
+        "acc_count": 15,
+        "acc_pct": 60.0,
+        "mean_retries": 0.0,
+        "mean_latency_ms": 4868.63248,
+        "mean_tokens": 360.88
+      }
+    },
+    "execution_success": {
+      "numerator": 60,
+      "denominator": 75,
+      "mean_pct": 80.0,
+      "std_pct": 0.0,
+      "median_pct": 80.0,
+      "min_pct": 80.0,
+      "max_pct": 80.0
+    },
+    "relational_accuracy": {
+      "numerator": 45,
+      "denominator": 75,
+      "mean_pct": 60.0,
+      "std_pct": 0.0,
+      "median_pct": 60.0,
+      "min_pct": 60.0,
+      "max_pct": 60.0
+    },
+    "retries": {
+      "mean": 0.0,
+      "std": 0.0,
+      "median": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "latency_ms": {
+      "mean": 4859.7,
+      "std": 7.98,
+      "median": 4857.15,
+      "min": 4853.3,
+      "max": 4868.63
+    },
+    "total_tokens": {
+      "mean": 360.57,
+      "std": 0.37,
+      "median": 360.68,
+      "min": 360.16,
+      "max": 360.88
+    }
+  },
+  "Mode 2 (Stateless Self-Correction)": {
+    "mode": "Mode 2 (Stateless Self-Correction)",
+    "sample_size_seeds": 3,
+    "total_queries_evaluated": 75,
+    "per_seed_results": {
+      "42": {
+        "succ_count": 24,
+        "succ_pct": 96.0,
+        "acc_count": 17,
+        "acc_pct": 68.0,
+        "mean_retries": 0.28,
+        "mean_latency_ms": 6563.39556,
+        "mean_tokens": 503.96
+      },
+      "123": {
+        "succ_count": 24,
+        "succ_pct": 96.0,
+        "acc_count": 17,
+        "acc_pct": 68.0,
+        "mean_retries": 0.28,
+        "mean_latency_ms": 6380.62656,
+        "mean_tokens": 503.24
+      },
+      "999": {
+        "succ_count": 24,
+        "succ_pct": 96.0,
+        "acc_count": 17,
+        "acc_pct": 68.0,
+        "mean_retries": 0.28,
+        "mean_latency_ms": 6380.672239999999,
+        "mean_tokens": 503.96
+      }
+    },
+    "execution_success": {
+      "numerator": 72,
+      "denominator": 75,
+      "mean_pct": 96.0,
+      "std_pct": 0.0,
+      "median_pct": 96.0,
+      "min_pct": 96.0,
+      "max_pct": 96.0
+    },
+    "relational_accuracy": {
+      "numerator": 51,
+      "denominator": 75,
+      "mean_pct": 68.0,
+      "std_pct": 0.0,
+      "median_pct": 68.0,
+      "min_pct": 68.0,
+      "max_pct": 68.0
+    },
+    "retries": {
+      "mean": 0.28,
+      "std": 0.0,
+      "median": 0.28,
+      "min": 0.28,
+      "max": 0.28
+    },
+    "latency_ms": {
+      "mean": 6441.56,
+      "std": 105.51,
+      "median": 6380.67,
+      "min": 6380.63,
+      "max": 6563.4
+    },
+    "total_tokens": {
+      "mean": 503.72,
+      "std": 0.42,
+      "median": 503.96,
+      "min": 503.24,
+      "max": 503.96
+    }
+  },
+  "Mode 3 (Naive Vector RAG)": {
+    "mode": "Mode 3 (Naive Vector RAG)",
+    "sample_size_seeds": 3,
+    "total_queries_evaluated": 75,
+    "per_seed_results": {
+      "42": {
+        "succ_count": 23,
+        "succ_pct": 92.0,
+        "acc_count": 17,
+        "acc_pct": 68.0,
+        "mean_retries": 0.0,
+        "mean_latency_ms": 6811.896599999999,
+        "mean_tokens": 558.28
+      },
+      "123": {
+        "succ_count": 23,
+        "succ_pct": 92.0,
+        "acc_count": 17,
+        "acc_pct": 68.0,
+        "mean_retries": 0.0,
+        "mean_latency_ms": 6773.598679999999,
+        "mean_tokens": 558.28
+      },
+      "999": {
+        "succ_count": 23,
+        "succ_pct": 92.0,
+        "acc_count": 17,
+        "acc_pct": 68.0,
+        "mean_retries": 0.0,
+        "mean_latency_ms": 6743.25424,
+        "mean_tokens": 558.28
+      }
+    },
+    "execution_success": {
+      "numerator": 69,
+      "denominator": 75,
+      "mean_pct": 92.0,
+      "std_pct": 0.0,
+      "median_pct": 92.0,
+      "min_pct": 92.0,
+      "max_pct": 92.0
+    },
+    "relational_accuracy": {
+      "numerator": 51,
+      "denominator": 75,
+      "mean_pct": 68.0,
+      "std_pct": 0.0,
+      "median_pct": 68.0,
+      "min_pct": 68.0,
+      "max_pct": 68.0
+    },
+    "retries": {
+      "mean": 0.0,
+      "std": 0.0,
+      "median": 0.0,
+      "min": 0.0,
+      "max": 0.0
+    },
+    "latency_ms": {
+      "mean": 6776.25,
+      "std": 34.4,
+      "median": 6773.6,
+      "min": 6743.25,
+      "max": 6811.9
+    },
+    "total_tokens": {
+      "mean": 558.28,
+      "std": 0.0,
+      "median": 558.28,
+      "min": 558.28,
+      "max": 558.28
+    }
+  },
+  "Mode 4 (Full ARMG)": {
+    "mode": "Mode 4 (Full ARMG)",
+    "sample_size_seeds": 3,
+    "total_queries_evaluated": 75,
+    "per_seed_results": {
+      "42": {
+        "succ_count": 24,
+        "succ_pct": 96.0,
+        "acc_count": 17,
+        "acc_pct": 68.0,
+        "mean_retries": 0.32,
+        "mean_latency_ms": 8787.93412,
+        "mean_tokens": 569.96
+      },
+      "123": {
+        "succ_count": 24,
+        "succ_pct": 96.0,
+        "acc_count": 17,
+        "acc_pct": 68.0,
+        "mean_retries": 0.4,
+        "mean_latency_ms": 9114.66012,
+        "mean_tokens": 619.36
+      },
+      "999": {
+        "succ_count": 24,
+        "succ_pct": 96.0,
+        "acc_count": 17,
+        "acc_pct": 68.0,
+        "mean_retries": 0.4,
+        "mean_latency_ms": 9099.1814,
+        "mean_tokens": 619.24
+      }
+    },
+    "execution_success": {
+      "numerator": 72,
+      "denominator": 75,
+      "mean_pct": 96.0,
+      "std_pct": 0.0,
+      "median_pct": 96.0,
+      "min_pct": 96.0,
+      "max_pct": 96.0
+    },
+    "relational_accuracy": {
+      "numerator": 51,
+      "denominator": 75,
+      "mean_pct": 68.0,
+      "std_pct": 0.0,
+      "median_pct": 68.0,
+      "min_pct": 68.0,
+      "max_pct": 68.0
+    },
+    "retries": {
+      "mean": 0.37,
+      "std": 0.05,
+      "median": 0.4,
+      "min": 0.32,
+      "max": 0.4
+    },
+    "latency_ms": {
+      "mean": 9000.59,
+      "std": 184.33,
+      "median": 9099.18,
+      "min": 8787.93,
+      "max": 9114.66
+    },
+    "total_tokens": {
+      "mean": 602.85,
+      "std": 28.49,
+      "median": 619.24,
+      "min": 569.96,
+      "max": 619.36
+    }
+  },
+  "Mode 5 (ARMG - Negative Constraints)": {
+    "mode": "Mode 5 (ARMG - Negative Constraints)",
+    "sample_size_seeds": 3,
+    "total_queries_evaluated": 75,
+    "per_seed_results": {
+      "42": {
+        "succ_count": 24,
+        "succ_pct": 96.0,
+        "acc_count": 17,
+        "acc_pct": 68.0,
+        "mean_retries": 0.32,
+        "mean_latency_ms": 8713.487239999999,
+        "mean_tokens": 530.72
+      },
+      "123": {
+        "succ_count": 24,
+        "succ_pct": 96.0,
+        "acc_count": 17,
+        "acc_pct": 68.0,
+        "mean_retries": 0.32,
+        "mean_latency_ms": 8707.70608,
+        "mean_tokens": 531.44
+      },
+      "999": {
+        "succ_count": 24,
+        "succ_pct": 96.0,
+        "acc_count": 17,
+        "acc_pct": 68.0,
+        "mean_retries": 0.32,
+        "mean_latency_ms": 8884.2556,
+        "mean_tokens": 530.76
+      }
+    },
+    "execution_success": {
+      "numerator": 72,
+      "denominator": 75,
+      "mean_pct": 96.0,
+      "std_pct": 0.0,
+      "median_pct": 96.0,
+      "min_pct": 96.0,
+      "max_pct": 96.0
+    },
+    "relational_accuracy": {
+      "numerator": 51,
+      "denominator": 75,
+      "mean_pct": 68.0,
+      "std_pct": 0.0,
+      "median_pct": 68.0,
+      "min_pct": 68.0,
+      "max_pct": 68.0
+    },
+    "retries": {
+      "mean": 0.32,
+      "std": 0.0,
+      "median": 0.32,
+      "min": 0.32,
+      "max": 0.32
+    },
+    "latency_ms": {
+      "mean": 8768.48,
+      "std": 100.3,
+      "median": 8713.49,
+      "min": 8707.71,
+      "max": 8884.26
+    },
+    "total_tokens": {
+      "mean": 530.97,
+      "std": 0.4,
+      "median": 530.76,
+      "min": 530.72,
+      "max": 531.44
+    }
+  },
+  "Mode 6 (ARMG - Temporal Decay)": {
+    "mode": "Mode 6 (ARMG - Temporal Decay)",
+    "sample_size_seeds": 3,
+    "total_queries_evaluated": 75,
+    "per_seed_results": {
+      "42": {
+        "succ_count": 24,
+        "succ_pct": 96.0,
+        "acc_count": 17,
+        "acc_pct": 68.0,
+        "mean_retries": 0.28,
+        "mean_latency_ms": 8453.386520000002,
+        "mean_tokens": 542.0
+      },
+      "123": {
+        "succ_count": 24,
+        "succ_pct": 96.0,
+        "acc_count": 17,
+        "acc_pct": 68.0,
+        "mean_retries": 0.28,
+        "mean_latency_ms": 8479.456719999998,
+        "mean_tokens": 542.72
+      },
+      "999": {
+        "succ_count": 24,
+        "succ_pct": 96.0,
+        "acc_count": 17,
+        "acc_pct": 68.0,
+        "mean_retries": 0.28,
+        "mean_latency_ms": 8591.0852,
+        "mean_tokens": 542.08
+      }
+    },
+    "execution_success": {
+      "numerator": 72,
+      "denominator": 75,
+      "mean_pct": 96.0,
+      "std_pct": 0.0,
+      "median_pct": 96.0,
+      "min_pct": 96.0,
+      "max_pct": 96.0
+    },
+    "relational_accuracy": {
+      "numerator": 51,
+      "denominator": 75,
+      "mean_pct": 68.0,
+      "std_pct": 0.0,
+      "median_pct": 68.0,
+      "min_pct": 68.0,
+      "max_pct": 68.0
+    },
+    "retries": {
+      "mean": 0.28,
+      "std": 0.0,
+      "median": 0.28,
+      "min": 0.28,
+      "max": 0.28
+    },
+    "latency_ms": {
+      "mean": 8507.98,
+      "std": 73.15,
+      "median": 8479.46,
+      "min": 8453.39,
+      "max": 8591.09
+    },
+    "total_tokens": {
+      "mean": 542.27,
+      "std": 0.39,
+      "median": 542.08,
+      "min": 542.0,
+      "max": 542.72
+    }
+  }
+}

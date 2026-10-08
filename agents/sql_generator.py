@@ -34,29 +34,42 @@ def extract_sql_from_response(text: str) -> str:
     """Deterministically extract SQL from LLM generated response text.
     
     Prefers ```sql ... ``` fenced blocks. Falls back to general code blocks
-    or raw SQL query text.
+    or raw SQL query text if they contain recognizable SQL statements.
+    Never returns arbitrary natural-language text as SQL.
     """
     if not text:
         return ""
 
-    # 1. Match ```sql ... ``` block
-    sql_block_match = re.search(r"```sql\s*([\s\S]*?)\s*```", text, re.IGNORECASE)
+    # 1. Match explicitly tagged ```sql / ```postgresql block
+    sql_block_match = re.search(
+        r"```(?:sql|postgresql|pgsql)\s*([\s\S]*?)\s*```", text, re.IGNORECASE
+    )
     if sql_block_match:
-        return sql_block_match.group(1).strip()
+        extracted = sql_block_match.group(1).strip()
+        if extracted:
+            return extracted
 
-    # 2. Match generic ``` ... ``` block
-    generic_block_match = re.search(r"```\s*([\s\S]*?)\s*```", text)
-    if generic_block_match:
-        return generic_block_match.group(1).strip()
+    # SQL statement start keywords for detecting valid SQL in generic blocks or plain text
+    sql_start_pattern = r"^(SELECT|WITH|DELETE|UPDATE|INSERT|DROP|ALTER|TRUNCATE|CREATE|EXPLAIN)\b"
 
-    # 3. Fallback: Check if text contains a SELECT or WITH statement
+    # 2. Match generic ``` ... ``` block (only if it contains a SQL statement, not non-sql tags like ```text)
+    fence_pattern = re.compile(r"```([a-zA-Z0-9_-]*)[ \t]*\r?\n?([\s\S]*?)```")
+    for tag, content in fence_pattern.findall(text):
+        tag_clean = tag.strip().lower()
+        if tag_clean and tag_clean not in ("sql", "postgresql", "pgsql"):
+            continue
+        content_stripped = content.strip()
+        if re.search(sql_start_pattern, content_stripped, re.IGNORECASE):
+            return content_stripped
+
+    # 3. Fallback: Check if un-fenced text contains a SQL statement
     lines = text.strip().splitlines()
     sql_lines = []
     started = False
     for line in lines:
         stripped = line.strip()
         if not started:
-            if re.match(r"^(SELECT|WITH)\b", stripped, re.IGNORECASE):
+            if re.match(sql_start_pattern, stripped, re.IGNORECASE):
                 started = True
                 sql_lines.append(stripped)
         else:
@@ -67,7 +80,7 @@ def extract_sql_from_response(text: str) -> str:
     if sql_lines:
         return "\n".join(sql_lines).strip()
 
-    return text.strip()
+    return ""
 
 
 class SQLGenerator:
@@ -89,10 +102,12 @@ STRICT INSTRUCTIONS:
         base_url: Optional[str] = None,
         model: Optional[str] = None,
         timeout: int = 60,
+        seed: Optional[int] = None,
     ):
         self.base_url = (base_url or OLLAMA_BASE_URL).rstrip("/")
         self.model = model or DEFAULT_LLM_MODEL
         self.timeout = timeout
+        self.seed = seed
 
     def generate(self, question: str, schema_markdown: str) -> GenerationResult:
         """Generate SQL for user question given deterministic schema Markdown.
@@ -113,14 +128,18 @@ STRICT INSTRUCTIONS:
 ### SQL QUERY:"""
 
         endpoint = f"{self.base_url}/api/generate"
+        options = {
+            "temperature": 0.0,
+        }
+        if self.seed is not None:
+            options["seed"] = self.seed
+
         payload = {
             "model": self.model,
             "prompt": user_prompt,
             "system": self.SYSTEM_PROMPT,
             "stream": False,
-            "options": {
-                "temperature": 0.0,
-            },
+            "options": options,
         }
 
         start_time = time.perf_counter()

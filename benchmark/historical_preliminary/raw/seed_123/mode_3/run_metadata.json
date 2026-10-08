@@ -1,0 +1,17 @@
+{
+  "seed": 123,
+  "mode_slug": "mode_3",
+  "mode_full_name": "Mode 3 (Naive Vector RAG)",
+  "temperature": 0.0,
+  "llm_model": "qwen2.5:7b-instruct",
+  "embedding_model": "nomic-embed-text",
+  "database": "PostgreSQL 18.1",
+  "total_queries": 25,
+  "pg_successes": 23,
+  "rel_correct": 17,
+  "mean_retries": 0.0,
+  "mean_latency_ms": 6838.49,
+  "mean_tokens": 558.28,
+  "isolation_verified": true,
+  "memory_store_initialized_empty": true
+}

@@ -7,6 +7,7 @@ Implements strict static AST-level pre-execution safety validation for PostgreSQ
 - Enforces read-only SELECT root expressions.
 """
 
+import re
 from typing import Optional, Tuple
 import sqlglot
 import sqlglot.expressions as exp
@@ -31,6 +32,16 @@ FORBIDDEN_KEYWORDS = {
     "DROP", "DELETE", "UPDATE", "INSERT", "ALTER", "CREATE",
     "TRUNCATE", "GRANT", "REVOKE", "MERGE", "EXEC", "EXECUTE",
 }
+
+
+def _extract_sql_code_tokens(sql: str) -> set:
+    """Extract standalone uppercase identifier/keyword tokens outside string literals and comments."""
+    # Replace single-quoted string literals with space (handles escaped '' as well)
+    no_strings = re.sub(r"'(?:''|[^'])*'", " ", sql)
+    # Replace block comments and line comments with space
+    no_comments = re.sub(r"/\*[\s\S]*?\*/|--[^\n]*", " ", no_strings)
+    # Extract word tokens
+    return set(re.findall(r"\b[A-Za-z_][A-Za-z0-9_]*\b", no_comments.upper()))
 
 
 def validate_sql(sql: str) -> Tuple[bool, Optional[str]]:
@@ -68,7 +79,7 @@ def validate_sql(sql: str) -> Tuple[bool, Optional[str]]:
             return False, f"Destructive mutation '{mut_type.__name__}' is strictly rejected."
 
     # 3. Keyword check for grant/revoke and unparsed administrative statements
-    sql_upper_tokens = set(trimmed_sql.upper().split())
+    sql_upper_tokens = _extract_sql_code_tokens(trimmed_sql)
     for kw in FORBIDDEN_KEYWORDS:
         if kw in sql_upper_tokens:
             # If keyword is present as a standalone token and not in allowed context
@@ -129,7 +140,7 @@ def classify_safety_violation(sql: str) -> Tuple[bool, Optional[str]]:
             return True, SafetyViolationCategory.DESTRUCTIVE_MUTATION
 
     # Check forbidden administrative/mutation keywords
-    sql_upper_tokens = set(trimmed_sql.upper().split())
+    sql_upper_tokens = _extract_sql_code_tokens(trimmed_sql)
     for kw in FORBIDDEN_KEYWORDS:
         if kw in sql_upper_tokens:
             return True, SafetyViolationCategory.FORBIDDEN_KEYWORD

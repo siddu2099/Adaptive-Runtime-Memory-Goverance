@@ -1,7 +1,7 @@
 run_id,mode,seed,query_id,category,question,success,execution_accuracy,retry_count,generation_attempts,latency_ms,prompt_tokens,completion_tokens,total_tokens,validation_failures,execution_failures,memory_retrieval_count,memory_admission,memory_reinforcement,error_category,failure_reason,final_sql,gold_sql
-run_mode_1_1789108503,Mode 1 (Zero-Shot),42,Q01,Category A — Simple Aggregations & Groupings,What is the total gross revenue across all transactions?,True,1,0,1,12022.03,354,24,378,0,0,0,,,,,"SELECT SUM(gross_revenue) AS total_gross_revenue
+authoritative_seed42_mode_1,Mode 1 (Zero-Shot),42,Q01,Category A — Simple Aggregations & Groupings,What is the total gross revenue across all transactions?,True,1,0,1,3260.418,354.0,24.0,378,0,0,0,,,,,"SELECT SUM(gross_revenue) AS total_gross_revenue
 FROM fact_sales_performance;",SELECT SUM(gross_revenue) AS total_gross_revenue FROM fact_sales_performance;
-run_mode_1_1789108503,Mode 1 (Zero-Shot),42,Q02,Category A — Simple Aggregations & Groupings,What is the total units sold by product category?,True,1,0,1,4261.901,277,53,330,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_1,Mode 1 (Zero-Shot),42,Q02,Category A — Simple Aggregations & Groupings,What is the total units sold by product category?,True,1,0,1,4319.894,277.0,53.0,330,0,0,0,,,,,"SELECT 
     category,
     SUM(units_sold) AS total_units_sold
 FROM 
@@ -12,9 +12,9 @@ ON
     fact_sales_performance.product_key = dim_product.product_key
 GROUP BY 
     category;","SELECT p.category, SUM(f.units_sold) AS total_units FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
-run_mode_1_1789108503,Mode 1 (Zero-Shot),42,Q03,Category A — Simple Aggregations & Groupings,What is the average discount applied across all transactions?,True,1,0,1,3106.215,354,21,375,0,0,0,,,,,"SELECT AVG(discount_applied) AS average_discount
+authoritative_seed42_mode_1,Mode 1 (Zero-Shot),42,Q03,Category A — Simple Aggregations & Groupings,What is the average discount applied across all transactions?,True,1,0,1,3062.135,354.0,21.0,375,0,0,0,,,,,"SELECT AVG(discount_applied) AS average_discount
 FROM fact_sales_performance;",SELECT AVG(discount_applied) AS avg_discount FROM fact_sales_performance;
-run_mode_1_1789108503,Mode 1 (Zero-Shot),42,Q04,Category A — Simple Aggregations & Groupings,How many transactions were recorded per market type?,False,0,0,1,4501.867,270,56,326,0,1,0,,,DatabaseError,"missing FROM-clause entry for table ""mt""
+authoritative_seed42_mode_1,Mode 1 (Zero-Shot),42,Q04,Category A — Simple Aggregations & Groupings,How many transactions were recorded per market type?,False,0,0,1,4476.783,270.0,56.0,326,0,1,0,,,DatabaseError,"missing FROM-clause entry for table ""mt""
 LINE 2:     mt.market_type, 
             ^","SELECT 
     mt.market_type, 
@@ -25,7 +25,7 @@ JOIN
     dim_geography dg ON fp.geo_key = dg.geo_key
 GROUP BY 
     mt.market_type;","SELECT g.market_type, COUNT(*) AS transaction_count FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.market_type;"
-run_mode_1_1789108503,Mode 1 (Zero-Shot),42,Q05,Category A — Simple Aggregations & Groupings,What is the total net profit by calendar quarter in 2025?,True,0,0,1,5002.054,290,70,360,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_1,Mode 1 (Zero-Shot),42,Q05,Category A — Simple Aggregations & Groupings,What is the total net profit by calendar quarter in 2025?,True,0,0,1,5113.987,290.0,70.0,360,0,0,0,,,,,"SELECT 
     t.calendar_quarter, 
     SUM(fp.net_profit) AS total_net_profit
 FROM 
@@ -36,7 +36,7 @@ WHERE
     t.calendar_year = 2025
 GROUP BY 
     t.calendar_quarter;","SELECT t.calendar_quarter, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY t.calendar_quarter ORDER BY t.calendar_quarter;"
-run_mode_1_1789108503,Mode 1 (Zero-Shot),42,Q06,Category B — Multi-Table Analytical Joins,What is the total gross revenue by geographic region?,True,1,0,1,4526.734,271,58,329,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_1,Mode 1 (Zero-Shot),42,Q06,Category B — Multi-Table Analytical Joins,What is the total gross revenue by geographic region?,True,1,0,1,4495.286,271.0,58.0,329,0,0,0,,,,,"SELECT 
     d.region, 
     SUM(f.gross_revenue) AS total_gross_revenue
 FROM 
@@ -45,7 +45,7 @@ JOIN
     dim_geography d ON f.geo_key = d.geo_key
 GROUP BY 
     d.region;","SELECT g.region, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.region;"
-run_mode_1_1789108503,Mode 1 (Zero-Shot),42,Q07,Category B — Multi-Table Analytical Joins,What is the total net profit by product category and market type?,True,1,0,1,5451.1,312,81,393,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_1,Mode 1 (Zero-Shot),42,Q07,Category B — Multi-Table Analytical Joins,What is the total net profit by product category and market type?,True,1,0,1,5421.154,312.0,81.0,393,0,0,0,,,,,"SELECT 
     dp.category, 
     dg.market_type, 
     SUM(fs.net_profit) AS total_net_profit
@@ -58,23 +58,21 @@ JOIN
 GROUP BY 
     dp.category, 
     dg.market_type;","SELECT p.category, g.market_type, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY p.category, g.market_type;"
-run_mode_1_1789108503,Mode 1 (Zero-Shot),42,Q08,Category B — Multi-Table Analytical Joins,What is the total units sold by region and calendar month in 2025?,False,0,0,1,5824.701,324,90,414,0,1,0,,,DatabaseError,"missing FROM-clause entry for table ""d""
-LINE 2:     d.region,
-            ^","SELECT 
+authoritative_seed42_mode_1,Mode 1 (Zero-Shot),42,Q08,Category B — Multi-Table Analytical Joins,What is the total units sold by region and calendar month in 2025?,True,1,0,1,5793.279,324.0,90.0,414,0,0,0,,,,,"SELECT 
     d.region,
     dt.calendar_month,
-    SUM(fs.units_sold) AS total_units_sold
+    SUM(f.units_sold) AS total_units_sold
 FROM 
-    fact_sales_performance fs
+    fact_sales_performance f
 JOIN 
-    dim_time dt ON fs.time_key = dt.time_key
+    dim_geography d ON f.geo_key = d.geo_key
 JOIN 
-    dim_geography dg ON fs.geo_key = dg.geo_key
+    dim_time dt ON f.time_key = dt.time_key
 WHERE 
     dt.calendar_year = 2025
 GROUP BY 
     d.region, dt.calendar_month;","SELECT g.region, t.calendar_month, SUM(f.units_sold) AS total_units FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY g.region, t.calendar_month;"
-run_mode_1_1789108503,Mode 1 (Zero-Shot),42,Q09,Category B — Multi-Table Analytical Joins,What is the total gross revenue and net profit for Hardware category by region?,True,1,0,1,5920.024,314,92,406,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_1,Mode 1 (Zero-Shot),42,Q09,Category B — Multi-Table Analytical Joins,What is the total gross revenue and net profit for Hardware category by region?,True,1,0,1,5794.486,314.0,92.0,406,0,0,0,,,,,"SELECT 
     d.region,
     SUM(fp.gross_revenue) AS total_gross_revenue,
     SUM(fp.net_profit) AS total_net_profit
@@ -88,7 +86,7 @@ WHERE
     p.category = 'Hardware'
 GROUP BY 
     d.region;","SELECT g.region, SUM(f.gross_revenue) AS total_revenue, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key JOIN dim_product p ON f.product_key = p.product_key WHERE p.category = 'Hardware' GROUP BY g.region;"
-run_mode_1_1789108503,Mode 1 (Zero-Shot),42,Q10,Category B — Multi-Table Analytical Joins,What is the average discount applied per product sub-category in the Enterprise market?,True,1,0,1,5566.267,314,86,400,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_1,Mode 1 (Zero-Shot),42,Q10,Category B — Multi-Table Analytical Joins,What is the average discount applied per product sub-category in the Enterprise market?,True,1,0,1,5609.824,314.0,86.0,400,0,0,0,,,,,"SELECT 
     dp.sub_category,
     AVG(fsp.discount_applied) AS avg_discount_applied
 FROM 
@@ -101,7 +99,7 @@ WHERE
     dg.market_type = 'Enterprise'
 GROUP BY 
     dp.sub_category;","SELECT p.sub_category, AVG(f.discount_applied) AS avg_discount FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.market_type = 'Enterprise' GROUP BY p.sub_category;"
-run_mode_1_1789108503,Mode 1 (Zero-Shot),42,Q11,Category B — Multi-Table Analytical Joins,What is the total net profit by day of the week for the Commercial market type?,False,0,0,1,5832.249,323,91,414,0,1,0,,,UndefinedColumn,"column g.time_key does not exist
+authoritative_seed42_mode_1,Mode 1 (Zero-Shot),42,Q11,Category B — Multi-Table Analytical Joins,What is the total net profit by day of the week for the Commercial market type?,False,0,0,1,5777.289,323.0,91.0,414,0,1,0,,,UndefinedColumn,"column g.time_key does not exist
 LINE 7:     dim_geography g ON t.time_key = g.time_key
                                             ^
 HINT:  Perhaps you meant to reference the column ""t.time_key"".","SELECT 
@@ -117,7 +115,7 @@ WHERE
     g.market_type = 'Commercial'
 GROUP BY 
     t.day_of_week;","SELECT t.day_of_week, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.market_type = 'Commercial' GROUP BY t.day_of_week;"
-run_mode_1_1789108503,Mode 1 (Zero-Shot),42,Q12,Category B — Multi-Table Analytical Joins,What is the total units sold by product name in the EMEA region?,True,1,0,1,5424.37,314,81,395,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_1,Mode 1 (Zero-Shot),42,Q12,Category B — Multi-Table Analytical Joins,What is the total units sold by product name in the EMEA region?,True,1,0,1,5318.778,314.0,81.0,395,0,0,0,,,,,"SELECT 
     dp.product_name, 
     SUM(fs.units_sold) AS total_units_sold
 FROM 
@@ -130,14 +128,14 @@ WHERE
     dg.region = 'EMEA'
 GROUP BY 
     dp.product_name;","SELECT p.product_name, SUM(f.units_sold) AS total_units FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.region = 'EMEA' GROUP BY p.product_name;"
-run_mode_1_1789108503,Mode 1 (Zero-Shot),42,Q13,Category B — Multi-Table Analytical Joins,What is the total gross revenue by zone in North America?,False,0,0,1,4445.807,273,56,329,0,1,0,,,DatabaseError,"missing FROM-clause entry for table ""z""
+authoritative_seed42_mode_1,Mode 1 (Zero-Shot),42,Q13,Category B — Multi-Table Analytical Joins,What is the total gross revenue by zone in North America?,False,0,0,1,4354.935,273.0,56.0,329,0,1,0,,,DatabaseError,"missing FROM-clause entry for table ""z""
 LINE 1: SELECT z.zone, SUM(f.gross_revenue) AS total_gross_revenue
                ^","SELECT z.zone, SUM(f.gross_revenue) AS total_gross_revenue
 FROM fact_sales_performance f
 JOIN dim_geography g ON f.geo_key = g.geo_key
 WHERE g.region = 'North America'
 GROUP BY z.zone;","SELECT g.zone, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.region = 'North America' GROUP BY g.zone;"
-run_mode_1_1789108503,Mode 1 (Zero-Shot),42,Q14,Category C — Advanced Analytical Queries,Rank product categories by total gross revenue.,True,0,0,1,4859.486,275,65,340,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_1,Mode 1 (Zero-Shot),42,Q14,Category C — Advanced Analytical Queries,Rank product categories by total gross revenue.,True,0,0,1,4712.975,275.0,65.0,340,0,0,0,,,,,"SELECT 
     category, 
     SUM(gross_revenue) AS total_gross_revenue
 FROM 
@@ -148,22 +146,22 @@ GROUP BY
     category
 ORDER BY 
     total_gross_revenue DESC;","SELECT p.category, SUM(f.gross_revenue) AS total_revenue, RANK() OVER (ORDER BY SUM(f.gross_revenue) DESC) AS revenue_rank FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
-run_mode_1_1789108503,Mode 1 (Zero-Shot),42,Q15,Category C — Advanced Analytical Queries,Calculate the running total of gross revenue across calendar months of 2025.,False,0,0,1,5597.888,291,85,376,0,1,0,,,GroupingError,"column ""fact_sales_performance.gross_revenue"" must appear in the GROUP BY clause or be used in an aggregate function
-LINE 3:     SUM(gross_revenue) OVER (ORDER BY calendar_month) AS run...
+authoritative_seed42_mode_1,Mode 1 (Zero-Shot),42,Q15,Category C — Advanced Analytical Queries,Calculate the running total of gross revenue across calendar months of 2025.,False,0,0,1,5598.952,291.0,88.0,379,0,1,0,,,GroupingError,"column ""f.gross_revenue"" must appear in the GROUP BY clause or be used in an aggregate function
+LINE 3:     SUM(f.gross_revenue) OVER (ORDER BY t.calendar_month) AS...
                 ^","SELECT 
-    calendar_month,
-    SUM(gross_revenue) OVER (ORDER BY calendar_month) AS running_total_gross_revenue
+    t.calendar_month,
+    SUM(f.gross_revenue) OVER (ORDER BY t.calendar_month) AS running_total_gross_revenue
 FROM 
-    fact_sales_performance 
+    dim_time t
 JOIN 
-    dim_time ON fact_sales_performance.time_key = dim_time.time_key
+    fact_sales_performance f ON t.time_key = f.time_key
 WHERE 
-    dim_time.calendar_year = 2025
+    t.calendar_year = 2025
 GROUP BY 
-    calendar_month
+    t.calendar_month
 ORDER BY 
-    calendar_month;","SELECT t.calendar_month, SUM(f.gross_revenue) AS monthly_revenue, SUM(SUM(f.gross_revenue)) OVER (ORDER BY t.calendar_month) AS running_total FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY t.calendar_month ORDER BY t.calendar_month;"
-run_mode_1_1789108503,Mode 1 (Zero-Shot),42,Q16,Category C — Advanced Analytical Queries,What are the top 3 products by total net profit?,True,1,0,1,4933.493,279,68,347,0,0,0,,,,,"SELECT 
+    t.calendar_month;","SELECT t.calendar_month, SUM(f.gross_revenue) AS monthly_revenue, SUM(SUM(f.gross_revenue)) OVER (ORDER BY t.calendar_month) AS running_total FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY t.calendar_month ORDER BY t.calendar_month;"
+authoritative_seed42_mode_1,Mode 1 (Zero-Shot),42,Q16,Category C — Advanced Analytical Queries,What are the top 3 products by total net profit?,True,1,0,1,4845.478,279.0,68.0,347,0,0,0,,,,,"SELECT 
     p.product_name, 
     SUM(fp.net_profit) AS total_net_profit
 FROM 
@@ -175,7 +173,7 @@ GROUP BY
 ORDER BY 
     total_net_profit DESC
 LIMIT 3;","SELECT p.product_name, SUM(f.net_profit) AS total_net_profit FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.product_name ORDER BY total_net_profit DESC LIMIT 3;"
-run_mode_1_1789108503,Mode 1 (Zero-Shot),42,Q17,Category C — Advanced Analytical Queries,Show monthly gross revenue along with previous month gross revenue in 2025 using LAG.,False,0,0,1,6741.909,294,111,405,0,1,0,,,DatabaseError,"missing FROM-clause entry for table ""t1""
+authoritative_seed42_mode_1,Mode 1 (Zero-Shot),42,Q17,Category C — Advanced Analytical Queries,Show monthly gross revenue along with previous month gross revenue in 2025 using LAG.,False,0,0,1,6536.89,294.0,111.0,405,0,1,0,,,DatabaseError,"missing FROM-clause entry for table ""t1""
 LINE 2:     t1.calendar_month,
             ^","SELECT 
     t1.calendar_month,
@@ -191,7 +189,7 @@ GROUP BY
     t1.calendar_month, t1.gross_revenue
 ORDER BY 
     t1.calendar_month;","SELECT t.calendar_month, SUM(f.gross_revenue) AS current_month_revenue, LAG(SUM(f.gross_revenue)) OVER (ORDER BY t.calendar_month) AS prev_month_revenue FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY t.calendar_month ORDER BY t.calendar_month;"
-run_mode_1_1789108503,Mode 1 (Zero-Shot),42,Q18,Category C — Advanced Analytical Queries,"For each product category, rank products by total units sold.",True,0,0,1,4987.617,279,67,346,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_1,Mode 1 (Zero-Shot),42,Q18,Category C — Advanced Analytical Queries,"For each product category, rank products by total units sold.",True,0,0,1,4821.234,279.0,67.0,346,0,0,0,,,,,"SELECT 
     category,
     product_name,
     SUM(units_sold) AS total_units_sold
@@ -203,18 +201,16 @@ GROUP BY
     category, product_name
 ORDER BY 
     category, total_units_sold DESC;","SELECT p.category, p.product_name, SUM(f.units_sold) AS total_units, RANK() OVER (PARTITION BY p.category ORDER BY SUM(f.units_sold) DESC) AS rank_in_category FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category, p.product_name;"
-run_mode_1_1789108503,Mode 1 (Zero-Shot),42,Q19,Category C — Advanced Analytical Queries,What is the percentage contribution of each region to total gross revenue?,True,0,0,1,5989.115,274,94,368,0,0,0,,,,,"SELECT 
-    region,
-    (SUM(gross_revenue) * 100.0 / (SELECT SUM(gross_revenue) FROM fact_sales_performance JOIN dim_geography ON fact_sales_performance.geo_key = dim_geography.geo_key)) AS revenue_percentage
+authoritative_seed42_mode_1,Mode 1 (Zero-Shot),42,Q19,Category C — Advanced Analytical Queries,What is the percentage contribution of each region to total gross revenue?,True,0,0,1,5143.16,274.0,76.0,350,0,0,0,,,,,"SELECT 
+    d.region,
+    (f.gross_revenue * 100.0 / SUM(f.gross_revenue) OVER ()) AS revenue_percentage
 FROM 
-    fact_sales_performance 
+    fact_sales_performance f
 JOIN 
-    dim_geography 
-ON 
-    fact_sales_performance.geo_key = dim_geography.geo_key
+    dim_geography d ON f.geo_key = d.geo_key
 GROUP BY 
-    region;","SELECT g.region, SUM(f.gross_revenue) AS region_revenue, ROUND((SUM(f.gross_revenue) * 100.0 / SUM(SUM(f.gross_revenue)) OVER ()), 2) AS pct_of_total FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.region;"
-run_mode_1_1789108503,Mode 1 (Zero-Shot),42,Q20,Category D — Semantic / Schema Trap Queries,What is the total revenue by region?,True,1,0,1,4423.156,269,56,325,0,0,0,,,,,"SELECT 
+    d.region, f.gross_revenue;","SELECT g.region, SUM(f.gross_revenue) AS region_revenue, ROUND((SUM(f.gross_revenue) * 100.0 / SUM(SUM(f.gross_revenue)) OVER ()), 2) AS pct_of_total FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.region;"
+authoritative_seed42_mode_1,Mode 1 (Zero-Shot),42,Q20,Category D — Semantic / Schema Trap Queries,What is the total revenue by region?,True,1,0,1,4419.631,269.0,56.0,325,0,0,0,,,,,"SELECT 
     d.region, 
     SUM(f.gross_revenue) AS total_revenue
 FROM 
@@ -223,7 +219,7 @@ JOIN
     dim_geography d ON f.geo_key = d.geo_key
 GROUP BY 
     d.region;","SELECT g.region, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.region;"
-run_mode_1_1789108503,Mode 1 (Zero-Shot),42,Q21,Category D — Semantic / Schema Trap Queries,Show total discount by product category.,True,1,0,1,4360.132,274,52,326,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_1,Mode 1 (Zero-Shot),42,Q21,Category D — Semantic / Schema Trap Queries,Show total discount by product category.,True,1,0,1,4294.269,274.0,52.0,326,0,0,0,,,,,"SELECT 
     p.category,
     SUM(f.discount_applied) AS total_discount
 FROM 
@@ -232,7 +228,7 @@ JOIN
     dim_product p ON f.product_key = p.product_key
 GROUP BY 
     p.category;","SELECT p.category, SUM(f.discount_applied) AS total_discount_applied FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
-run_mode_1_1789108503,Mode 1 (Zero-Shot),42,Q22,Category D — Semantic / Schema Trap Queries,What is the total profit for each product category?,True,1,0,1,4287.713,277,53,330,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_1,Mode 1 (Zero-Shot),42,Q22,Category D — Semantic / Schema Trap Queries,What is the total profit for each product category?,True,1,0,1,4227.414,277.0,53.0,330,0,0,0,,,,,"SELECT 
     category, 
     SUM(net_profit) AS total_profit
 FROM 
@@ -243,23 +239,23 @@ ON
     fact_sales_performance.product_key = dim_product.product_key
 GROUP BY 
     category;","SELECT p.category, SUM(f.net_profit) AS total_net_profit FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
-run_mode_1_1789108503,Mode 1 (Zero-Shot),42,Q23,Category D — Semantic / Schema Trap Queries,What is the average cost of products in each sub-category?,True,1,0,1,3621.031,279,34,313,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_1,Mode 1 (Zero-Shot),42,Q23,Category D — Semantic / Schema Trap Queries,What is the average cost of products in each sub-category?,True,1,0,1,3604.125,279.0,34.0,313,0,0,0,,,,,"SELECT 
     sub_category, 
     AVG(unit_cost) AS average_cost
 FROM 
     dim_product
 GROUP BY 
     sub_category;","SELECT p.sub_category, AVG(p.unit_cost) AS avg_unit_cost FROM dim_product p GROUP BY p.sub_category;"
-run_mode_1_1789108503,Mode 1 (Zero-Shot),42,Q24,Category D — Semantic / Schema Trap Queries,What is the total gross revenue by market?,True,1,0,1,4607.486,270,60,330,0,0,0,,,,,"SELECT 
-    m.market_type, 
+authoritative_seed42_mode_1,Mode 1 (Zero-Shot),42,Q24,Category D — Semantic / Schema Trap Queries,What is the total gross revenue by market?,True,1,0,1,4584.341,270.0,60.0,330,0,0,0,,,,,"SELECT 
+    d.market_type, 
     SUM(f.gross_revenue) AS total_gross_revenue
 FROM 
     fact_sales_performance f
 JOIN 
-    dim_geography m ON f.geo_key = m.geo_key
+    dim_geography d ON f.geo_key = d.geo_key
 GROUP BY 
-    m.market_type;","SELECT g.market_type, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.market_type;"
-run_mode_1_1789108503,Mode 1 (Zero-Shot),42,Q25,Category D — Semantic / Schema Trap Queries,What is the total profit and total revenue for each market type?,True,0,0,1,5748.579,274,90,364,0,0,0,,,,,"SELECT 
+    d.market_type;","SELECT g.market_type, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.market_type;"
+authoritative_seed42_mode_1,Mode 1 (Zero-Shot),42,Q25,Category D — Semantic / Schema Trap Queries,What is the total profit and total revenue for each market type?,True,0,0,1,5745.841,274.0,90.0,364,0,0,0,,,,,"SELECT 
     mt.market_type,
     SUM(sp.net_profit) AS total_profit,
     SUM(sp.gross_revenue) AS total_revenue
@@ -271,9 +267,9 @@ JOIN
     (SELECT DISTINCT market_type FROM dim_geography) mt ON dg.market_type = mt.market_type
 GROUP BY 
     mt.market_type;","SELECT g.market_type, SUM(f.gross_revenue) AS total_gross_revenue, SUM(f.net_profit) AS total_net_profit FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.market_type;"
-run_mode_2_1789108635,Mode 2 (Stateless Self-Correction),42,Q01,Category A — Simple Aggregations & Groupings,What is the total gross revenue across all transactions?,True,1,0,1,3346.478,354,24,378,0,0,0,,,,,"SELECT SUM(gross_revenue) AS total_gross_revenue
+authoritative_seed42_mode_2,Mode 2 (Stateless Self-Correction),42,Q01,Category A — Simple Aggregations & Groupings,What is the total gross revenue across all transactions?,True,1,0,1,3282.189,354.0,24.0,378,0,0,0,,,,,"SELECT SUM(gross_revenue) AS total_gross_revenue
 FROM fact_sales_performance;",SELECT SUM(gross_revenue) AS total_gross_revenue FROM fact_sales_performance;
-run_mode_2_1789108635,Mode 2 (Stateless Self-Correction),42,Q02,Category A — Simple Aggregations & Groupings,What is the total units sold by product category?,True,1,0,1,4350.064,277,53,330,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_2,Mode 2 (Stateless Self-Correction),42,Q02,Category A — Simple Aggregations & Groupings,What is the total units sold by product category?,True,1,0,1,4557.355,277.0,53.0,330,0,0,0,,,,,"SELECT 
     category,
     SUM(units_sold) AS total_units_sold
 FROM 
@@ -284,18 +280,18 @@ ON
     fact_sales_performance.product_key = dim_product.product_key
 GROUP BY 
     category;","SELECT p.category, SUM(f.units_sold) AS total_units FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
-run_mode_2_1789108635,Mode 2 (Stateless Self-Correction),42,Q03,Category A — Simple Aggregations & Groupings,What is the average discount applied across all transactions?,True,1,0,1,3059.34,354,21,375,0,0,0,,,,,"SELECT AVG(discount_applied) AS average_discount
+authoritative_seed42_mode_2,Mode 2 (Stateless Self-Correction),42,Q03,Category A — Simple Aggregations & Groupings,What is the average discount applied across all transactions?,True,1,0,1,3109.092,354.0,21.0,375,0,0,0,,,,,"SELECT AVG(discount_applied) AS average_discount
 FROM fact_sales_performance;",SELECT AVG(discount_applied) AS avg_discount FROM fact_sales_performance;
-run_mode_2_1789108635,Mode 2 (Stateless Self-Correction),42,Q04,Category A — Simple Aggregations & Groupings,How many transactions were recorded per market type?,True,1,1,2,9054.77,627,110,737,0,1,0,,,DatabaseError,,"SELECT 
+authoritative_seed42_mode_2,Mode 2 (Stateless Self-Correction),42,Q04,Category A — Simple Aggregations & Groupings,How many transactions were recorded per market type?,True,1,1,2,9088.347,628.0,112.0,740,0,1,0,,,DatabaseError,,"SELECT 
     dg.market_type, 
-    COUNT(fp.fact_key) AS transactions
+    COUNT(fp.fact_key) AS transactions_count
 FROM 
     fact_sales_performance fp
 JOIN 
     dim_geography dg ON fp.geo_key = dg.geo_key
 GROUP BY 
     dg.market_type;","SELECT g.market_type, COUNT(*) AS transaction_count FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.market_type;"
-run_mode_2_1789108635,Mode 2 (Stateless Self-Correction),42,Q05,Category A — Simple Aggregations & Groupings,What is the total net profit by calendar quarter in 2025?,True,0,0,1,5103.452,290,70,360,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_2,Mode 2 (Stateless Self-Correction),42,Q05,Category A — Simple Aggregations & Groupings,What is the total net profit by calendar quarter in 2025?,True,0,0,1,5029.987,290.0,70.0,360,0,0,0,,,,,"SELECT 
     t.calendar_quarter, 
     SUM(fp.net_profit) AS total_net_profit
 FROM 
@@ -306,7 +302,7 @@ WHERE
     t.calendar_year = 2025
 GROUP BY 
     t.calendar_quarter;","SELECT t.calendar_quarter, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY t.calendar_quarter ORDER BY t.calendar_quarter;"
-run_mode_2_1789108635,Mode 2 (Stateless Self-Correction),42,Q06,Category B — Multi-Table Analytical Joins,What is the total gross revenue by geographic region?,True,1,0,1,4502.281,271,58,329,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_2,Mode 2 (Stateless Self-Correction),42,Q06,Category B — Multi-Table Analytical Joins,What is the total gross revenue by geographic region?,True,1,0,1,4498.633,271.0,58.0,329,0,0,0,,,,,"SELECT 
     d.region, 
     SUM(f.gross_revenue) AS total_gross_revenue
 FROM 
@@ -315,7 +311,7 @@ JOIN
     dim_geography d ON f.geo_key = d.geo_key
 GROUP BY 
     d.region;","SELECT g.region, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.region;"
-run_mode_2_1789108635,Mode 2 (Stateless Self-Correction),42,Q07,Category B — Multi-Table Analytical Joins,What is the total net profit by product category and market type?,True,1,0,1,5460.977,312,81,393,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_2,Mode 2 (Stateless Self-Correction),42,Q07,Category B — Multi-Table Analytical Joins,What is the total net profit by product category and market type?,True,1,0,1,5424.078,312.0,81.0,393,0,0,0,,,,,"SELECT 
     dp.category, 
     dg.market_type, 
     SUM(fs.net_profit) AS total_net_profit
@@ -328,21 +324,21 @@ JOIN
 GROUP BY 
     dp.category, 
     dg.market_type;","SELECT p.category, g.market_type, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY p.category, g.market_type;"
-run_mode_2_1789108635,Mode 2 (Stateless Self-Correction),42,Q08,Category B — Multi-Table Analytical Joins,What is the total units sold by region and calendar month in 2025?,True,1,1,2,11805.749,768,180,948,0,1,0,,,DatabaseError,,"SELECT 
-    dg.region,
+authoritative_seed42_mode_2,Mode 2 (Stateless Self-Correction),42,Q08,Category B — Multi-Table Analytical Joins,What is the total units sold by region and calendar month in 2025?,True,1,0,1,5788.259,324.0,90.0,414,0,0,0,,,,,"SELECT 
+    d.region,
     dt.calendar_month,
-    SUM(fs.units_sold) AS total_units_sold
+    SUM(f.units_sold) AS total_units_sold
 FROM 
-    fact_sales_performance fs
+    fact_sales_performance f
 JOIN 
-    dim_time dt ON fs.time_key = dt.time_key
+    dim_geography d ON f.geo_key = d.geo_key
 JOIN 
-    dim_geography dg ON fs.geo_key = dg.geo_key
+    dim_time dt ON f.time_key = dt.time_key
 WHERE 
     dt.calendar_year = 2025
 GROUP BY 
-    dg.region, dt.calendar_month;","SELECT g.region, t.calendar_month, SUM(f.units_sold) AS total_units FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY g.region, t.calendar_month;"
-run_mode_2_1789108635,Mode 2 (Stateless Self-Correction),42,Q09,Category B — Multi-Table Analytical Joins,What is the total gross revenue and net profit for Hardware category by region?,True,1,0,1,5890.364,314,92,406,0,0,0,,,,,"SELECT 
+    d.region, dt.calendar_month;","SELECT g.region, t.calendar_month, SUM(f.units_sold) AS total_units FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY g.region, t.calendar_month;"
+authoritative_seed42_mode_2,Mode 2 (Stateless Self-Correction),42,Q09,Category B — Multi-Table Analytical Joins,What is the total gross revenue and net profit for Hardware category by region?,True,1,0,1,5993.445,314.0,92.0,406,0,0,0,,,,,"SELECT 
     d.region,
     SUM(fp.gross_revenue) AS total_gross_revenue,
     SUM(fp.net_profit) AS total_net_profit
@@ -356,7 +352,7 @@ WHERE
     p.category = 'Hardware'
 GROUP BY 
     d.region;","SELECT g.region, SUM(f.gross_revenue) AS total_revenue, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key JOIN dim_product p ON f.product_key = p.product_key WHERE p.category = 'Hardware' GROUP BY g.region;"
-run_mode_2_1789108635,Mode 2 (Stateless Self-Correction),42,Q10,Category B — Multi-Table Analytical Joins,What is the average discount applied per product sub-category in the Enterprise market?,True,1,0,1,5754.777,314,86,400,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_2,Mode 2 (Stateless Self-Correction),42,Q10,Category B — Multi-Table Analytical Joins,What is the average discount applied per product sub-category in the Enterprise market?,True,1,0,1,5705.499,314.0,86.0,400,0,0,0,,,,,"SELECT 
     dp.sub_category,
     AVG(fsp.discount_applied) AS avg_discount_applied
 FROM 
@@ -369,7 +365,7 @@ WHERE
     dg.market_type = 'Enterprise'
 GROUP BY 
     dp.sub_category;","SELECT p.sub_category, AVG(f.discount_applied) AS avg_discount FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.market_type = 'Enterprise' GROUP BY p.sub_category;"
-run_mode_2_1789108635,Mode 2 (Stateless Self-Correction),42,Q11,Category B — Multi-Table Analytical Joins,What is the total net profit by day of the week for the Commercial market type?,False,0,3,4,23548.626,1724,364,2088,0,4,0,,,UndefinedColumn,"column g.time_key does not exist
+authoritative_seed42_mode_2,Mode 2 (Stateless Self-Correction),42,Q11,Category B — Multi-Table Analytical Joins,What is the total net profit by day of the week for the Commercial market type?,False,0,3,4,23857.562,1724.0,364.0,2088,0,4,0,,,UndefinedColumn,"column g.time_key does not exist
 LINE 7:     dim_geography g ON t.time_key = g.time_key
                                             ^
 HINT:  Perhaps you meant to reference the column ""t.time_key"".","SELECT 
@@ -385,7 +381,7 @@ WHERE
     g.market_type = 'Commercial'
 GROUP BY 
     t.day_of_week;","SELECT t.day_of_week, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.market_type = 'Commercial' GROUP BY t.day_of_week;"
-run_mode_2_1789108635,Mode 2 (Stateless Self-Correction),42,Q12,Category B — Multi-Table Analytical Joins,What is the total units sold by product name in the EMEA region?,True,1,0,1,5451.553,314,81,395,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_2,Mode 2 (Stateless Self-Correction),42,Q12,Category B — Multi-Table Analytical Joins,What is the total units sold by product name in the EMEA region?,True,1,0,1,5531.402,314.0,81.0,395,0,0,0,,,,,"SELECT 
     dp.product_name, 
     SUM(fs.units_sold) AS total_units_sold
 FROM 
@@ -398,12 +394,12 @@ WHERE
     dg.region = 'EMEA'
 GROUP BY 
     dp.product_name;","SELECT p.product_name, SUM(f.units_sold) AS total_units FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.region = 'EMEA' GROUP BY p.product_name;"
-run_mode_2_1789108635,Mode 2 (Stateless Self-Correction),42,Q13,Category B — Multi-Table Analytical Joins,What is the total gross revenue by zone in North America?,True,1,1,2,9139.68,646,112,758,0,1,0,,,DatabaseError,,"SELECT g.zone, SUM(f.gross_revenue) AS total_gross_revenue
+authoritative_seed42_mode_2,Mode 2 (Stateless Self-Correction),42,Q13,Category B — Multi-Table Analytical Joins,What is the total gross revenue by zone in North America?,True,1,1,2,9157.043,646.0,112.0,758,0,1,0,,,DatabaseError,,"SELECT g.zone, SUM(f.gross_revenue) AS total_gross_revenue
 FROM fact_sales_performance f
 JOIN dim_geography g ON f.geo_key = g.geo_key
 WHERE g.region = 'North America'
 GROUP BY g.zone;","SELECT g.zone, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.region = 'North America' GROUP BY g.zone;"
-run_mode_2_1789108635,Mode 2 (Stateless Self-Correction),42,Q14,Category C — Advanced Analytical Queries,Rank product categories by total gross revenue.,True,0,0,1,4852.371,275,65,340,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_2,Mode 2 (Stateless Self-Correction),42,Q14,Category C — Advanced Analytical Queries,Rank product categories by total gross revenue.,True,0,0,1,4899.039,275.0,65.0,340,0,0,0,,,,,"SELECT 
     category, 
     SUM(gross_revenue) AS total_gross_revenue
 FROM 
@@ -414,20 +410,20 @@ GROUP BY
     category
 ORDER BY 
     total_gross_revenue DESC;","SELECT p.category, SUM(f.gross_revenue) AS total_revenue, RANK() OVER (ORDER BY SUM(f.gross_revenue) DESC) AS revenue_rank FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
-run_mode_2_1789108635,Mode 2 (Stateless Self-Correction),42,Q15,Category C — Advanced Analytical Queries,Calculate the running total of gross revenue across calendar months of 2025.,True,0,1,2,11897.662,725,178,903,0,1,0,,,GroupingError,,"SELECT 
-    calendar_month,
-    SUM(gross_revenue) OVER (ORDER BY calendar_month) AS running_total_gross_revenue
+authoritative_seed42_mode_2,Mode 2 (Stateless Self-Correction),42,Q15,Category C — Advanced Analytical Queries,Calculate the running total of gross revenue across calendar months of 2025.,True,0,1,2,12106.916,727.0,182.0,909,0,1,0,,,GroupingError,,"SELECT 
+    t.calendar_month,
+    SUM(f.gross_revenue) OVER (ORDER BY t.calendar_month) AS running_total_gross_revenue
 FROM 
-    fact_sales_performance 
+    dim_time t
 JOIN 
-    dim_time ON fact_sales_performance.time_key = dim_time.time_key
+    fact_sales_performance f ON t.time_key = f.time_key
 WHERE 
-    dim_time.calendar_year = 2025
+    t.calendar_year = 2025
 GROUP BY 
-    calendar_month, fact_sales_performance.gross_revenue
+    t.calendar_month, f.gross_revenue
 ORDER BY 
-    calendar_month;","SELECT t.calendar_month, SUM(f.gross_revenue) AS monthly_revenue, SUM(SUM(f.gross_revenue)) OVER (ORDER BY t.calendar_month) AS running_total FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY t.calendar_month ORDER BY t.calendar_month;"
-run_mode_2_1789108635,Mode 2 (Stateless Self-Correction),42,Q16,Category C — Advanced Analytical Queries,What are the top 3 products by total net profit?,True,1,0,1,4977.015,279,68,347,0,0,0,,,,,"SELECT 
+    t.calendar_month;","SELECT t.calendar_month, SUM(f.gross_revenue) AS monthly_revenue, SUM(SUM(f.gross_revenue)) OVER (ORDER BY t.calendar_month) AS running_total FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY t.calendar_month ORDER BY t.calendar_month;"
+authoritative_seed42_mode_2,Mode 2 (Stateless Self-Correction),42,Q16,Category C — Advanced Analytical Queries,What are the top 3 products by total net profit?,True,1,0,1,5045.129,279.0,68.0,347,0,0,0,,,,,"SELECT 
     p.product_name, 
     SUM(fp.net_profit) AS total_net_profit
 FROM 
@@ -439,7 +435,7 @@ GROUP BY
 ORDER BY 
     total_net_profit DESC
 LIMIT 3;","SELECT p.product_name, SUM(f.net_profit) AS total_net_profit FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.product_name ORDER BY total_net_profit DESC LIMIT 3;"
-run_mode_2_1789108635,Mode 2 (Stateless Self-Correction),42,Q17,Category C — Advanced Analytical Queries,Show monthly gross revenue along with previous month gross revenue in 2025 using LAG.,True,0,1,2,12716.252,732,203,935,0,1,0,,,DatabaseError,,"SELECT 
+authoritative_seed42_mode_2,Mode 2 (Stateless Self-Correction),42,Q17,Category C — Advanced Analytical Queries,Show monthly gross revenue along with previous month gross revenue in 2025 using LAG.,True,0,1,2,12918.268,732.0,203.0,935,0,1,0,,,DatabaseError,,"SELECT 
     dt.calendar_month,
     fsp.gross_revenue,
     LAG(fsp.gross_revenue) OVER (ORDER BY dt.calendar_month) AS prev_month_gross_revenue
@@ -451,7 +447,7 @@ WHERE
     dt.calendar_year = 2025
 ORDER BY 
     dt.calendar_month;","SELECT t.calendar_month, SUM(f.gross_revenue) AS current_month_revenue, LAG(SUM(f.gross_revenue)) OVER (ORDER BY t.calendar_month) AS prev_month_revenue FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY t.calendar_month ORDER BY t.calendar_month;"
-run_mode_2_1789108635,Mode 2 (Stateless Self-Correction),42,Q18,Category C — Advanced Analytical Queries,"For each product category, rank products by total units sold.",True,0,0,1,4946.026,279,67,346,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_2,Mode 2 (Stateless Self-Correction),42,Q18,Category C — Advanced Analytical Queries,"For each product category, rank products by total units sold.",True,0,0,1,5005.526,279.0,67.0,346,0,0,0,,,,,"SELECT 
     category,
     product_name,
     SUM(units_sold) AS total_units_sold
@@ -463,18 +459,18 @@ GROUP BY
     category, product_name
 ORDER BY 
     category, total_units_sold DESC;","SELECT p.category, p.product_name, SUM(f.units_sold) AS total_units, RANK() OVER (PARTITION BY p.category ORDER BY SUM(f.units_sold) DESC) AS rank_in_category FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category, p.product_name;"
-run_mode_2_1789108635,Mode 2 (Stateless Self-Correction),42,Q19,Category C — Advanced Analytical Queries,What is the percentage contribution of each region to total gross revenue?,False,0,3,4,20896.501,1453,292,1745,0,4,0,,,GroupingError,"column ""fact_sales_performance.gross_revenue"" must appear in the GROUP BY clause or be used in an aggregate function
-LINE 3:     (SUM(gross_revenue) * 100.0 / SUM(gross_revenue) OVER ()...
-                                              ^","SELECT 
+authoritative_seed42_mode_2,Mode 2 (Stateless Self-Correction),42,Q19,Category C — Advanced Analytical Queries,What is the percentage contribution of each region to total gross revenue?,True,0,0,1,6086.512,274.0,94.0,368,0,0,0,,,,,"SELECT 
     region,
-    (SUM(gross_revenue) * 100.0 / SUM(gross_revenue) OVER ()) AS revenue_percentage
+    (SUM(gross_revenue) * 100.0 / (SELECT SUM(gross_revenue) FROM fact_sales_performance JOIN dim_geography ON fact_sales_performance.geo_key = dim_geography.geo_key)) AS revenue_percentage
 FROM 
-    fact_sales_performance
+    fact_sales_performance 
 JOIN 
-    dim_geography ON fact_sales_performance.geo_key = dim_geography.geo_key
+    dim_geography 
+ON 
+    fact_sales_performance.geo_key = dim_geography.geo_key
 GROUP BY 
-    region","SELECT g.region, SUM(f.gross_revenue) AS region_revenue, ROUND((SUM(f.gross_revenue) * 100.0 / SUM(SUM(f.gross_revenue)) OVER ()), 2) AS pct_of_total FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.region;"
-run_mode_2_1789108635,Mode 2 (Stateless Self-Correction),42,Q20,Category D — Semantic / Schema Trap Queries,What is the total revenue by region?,True,1,0,1,4494.552,269,56,325,0,0,0,,,,,"SELECT 
+    region;","SELECT g.region, SUM(f.gross_revenue) AS region_revenue, ROUND((SUM(f.gross_revenue) * 100.0 / SUM(SUM(f.gross_revenue)) OVER ()), 2) AS pct_of_total FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.region;"
+authoritative_seed42_mode_2,Mode 2 (Stateless Self-Correction),42,Q20,Category D — Semantic / Schema Trap Queries,What is the total revenue by region?,True,1,0,1,4501.449,269.0,56.0,325,0,0,0,,,,,"SELECT 
     d.region, 
     SUM(f.gross_revenue) AS total_revenue
 FROM 
@@ -483,7 +479,7 @@ JOIN
     dim_geography d ON f.geo_key = d.geo_key
 GROUP BY 
     d.region;","SELECT g.region, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.region;"
-run_mode_2_1789108635,Mode 2 (Stateless Self-Correction),42,Q21,Category D — Semantic / Schema Trap Queries,Show total discount by product category.,True,1,0,1,4291.403,274,52,326,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_2,Mode 2 (Stateless Self-Correction),42,Q21,Category D — Semantic / Schema Trap Queries,Show total discount by product category.,True,1,0,1,4370.99,274.0,52.0,326,0,0,0,,,,,"SELECT 
     p.category,
     SUM(f.discount_applied) AS total_discount
 FROM 
@@ -492,7 +488,7 @@ JOIN
     dim_product p ON f.product_key = p.product_key
 GROUP BY 
     p.category;","SELECT p.category, SUM(f.discount_applied) AS total_discount_applied FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
-run_mode_2_1789108635,Mode 2 (Stateless Self-Correction),42,Q22,Category D — Semantic / Schema Trap Queries,What is the total profit for each product category?,True,1,0,1,4384.849,277,53,330,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_2,Mode 2 (Stateless Self-Correction),42,Q22,Category D — Semantic / Schema Trap Queries,What is the total profit for each product category?,True,1,0,1,4346.137,277.0,53.0,330,0,0,0,,,,,"SELECT 
     category, 
     SUM(net_profit) AS total_profit
 FROM 
@@ -503,23 +499,23 @@ ON
     fact_sales_performance.product_key = dim_product.product_key
 GROUP BY 
     category;","SELECT p.category, SUM(f.net_profit) AS total_net_profit FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
-run_mode_2_1789108635,Mode 2 (Stateless Self-Correction),42,Q23,Category D — Semantic / Schema Trap Queries,What is the average cost of products in each sub-category?,True,1,0,1,3613.694,279,34,313,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_2,Mode 2 (Stateless Self-Correction),42,Q23,Category D — Semantic / Schema Trap Queries,What is the average cost of products in each sub-category?,True,1,0,1,3560.601,279.0,34.0,313,0,0,0,,,,,"SELECT 
     sub_category, 
     AVG(unit_cost) AS average_cost
 FROM 
     dim_product
 GROUP BY 
     sub_category;","SELECT p.sub_category, AVG(p.unit_cost) AS avg_unit_cost FROM dim_product p GROUP BY p.sub_category;"
-run_mode_2_1789108635,Mode 2 (Stateless Self-Correction),42,Q24,Category D — Semantic / Schema Trap Queries,What is the total gross revenue by market?,True,1,0,1,4605.799,270,60,330,0,0,0,,,,,"SELECT 
-    m.market_type, 
+authoritative_seed42_mode_2,Mode 2 (Stateless Self-Correction),42,Q24,Category D — Semantic / Schema Trap Queries,What is the total gross revenue by market?,True,1,0,1,4528.76,270.0,60.0,330,0,0,0,,,,,"SELECT 
+    d.market_type, 
     SUM(f.gross_revenue) AS total_gross_revenue
 FROM 
     fact_sales_performance f
 JOIN 
-    dim_geography m ON f.geo_key = m.geo_key
+    dim_geography d ON f.geo_key = d.geo_key
 GROUP BY 
-    m.market_type;","SELECT g.market_type, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.market_type;"
-run_mode_2_1789108635,Mode 2 (Stateless Self-Correction),42,Q25,Category D — Semantic / Schema Trap Queries,What is the total profit and total revenue for each market type?,True,0,0,1,5864.969,274,90,364,0,0,0,,,,,"SELECT 
+    d.market_type;","SELECT g.market_type, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.market_type;"
+authoritative_seed42_mode_2,Mode 2 (Stateless Self-Correction),42,Q25,Category D — Semantic / Schema Trap Queries,What is the total profit and total revenue for each market type?,True,0,0,1,5692.671,274.0,90.0,364,0,0,0,,,,,"SELECT 
     mt.market_type,
     SUM(sp.net_profit) AS total_profit,
     SUM(sp.gross_revenue) AS total_revenue
@@ -531,76 +527,76 @@ JOIN
     (SELECT DISTINCT market_type FROM dim_geography) mt ON dg.market_type = mt.market_type
 GROUP BY 
     mt.market_type;","SELECT g.market_type, SUM(f.gross_revenue) AS total_gross_revenue, SUM(f.net_profit) AS total_net_profit FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.market_type;"
-run_mode_3_1789108819,Mode 3 (Naive Vector RAG),42,Q01,Category A — Simple Aggregations & Groupings,What is the total gross revenue across all transactions?,True,1,0,1,5992.401,354,24,378,0,0,0,NAIVE_STORED,,,,"SELECT SUM(gross_revenue) AS total_gross_revenue
+authoritative_seed42_mode_3,Mode 3 (Naive Vector RAG),42,Q01,Category A — Simple Aggregations & Groupings,What is the total gross revenue across all transactions?,True,1,0,1,6018.134,354.0,24.0,378,0,0,0,NAIVE_STORED,,,,"SELECT SUM(gross_revenue) AS total_gross_revenue
 FROM fact_sales_performance;",SELECT SUM(gross_revenue) AS total_gross_revenue FROM fact_sales_performance;
-run_mode_3_1789108819,Mode 3 (Naive Vector RAG),42,Q02,Category A — Simple Aggregations & Groupings,What is the total units sold by product category?,True,1,0,1,6055.853,328,42,370,0,0,1,NAIVE_STORED,,,,"SELECT category, SUM(units_sold) AS total_units_sold
+authoritative_seed42_mode_3,Mode 3 (Naive Vector RAG),42,Q02,Category A — Simple Aggregations & Groupings,What is the total units sold by product category?,True,1,0,1,6041.247,328.0,42.0,370,0,0,1,NAIVE_STORED,,,,"SELECT category, SUM(units_sold) AS total_units_sold
 FROM fact_sales_performance AS fp
 JOIN dim_product AS dp ON fp.product_key = dp.product_key
 GROUP BY category;","SELECT p.category, SUM(f.units_sold) AS total_units FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
-run_mode_3_1789108819,Mode 3 (Naive Vector RAG),42,Q03,Category A — Simple Aggregations & Groupings,What is the average discount applied across all transactions?,True,1,0,1,5306.533,465,23,488,0,0,2,NAIVE_STORED,,,,"SELECT AVG(discount_applied) AS average_discount_applied
+authoritative_seed42_mode_3,Mode 3 (Naive Vector RAG),42,Q03,Category A — Simple Aggregations & Groupings,What is the average discount applied across all transactions?,True,1,0,1,5275.598,465.0,23.0,488,0,0,2,NAIVE_STORED,,,,"SELECT AVG(discount_applied) AS average_discount_applied
 FROM fact_sales_performance;",SELECT AVG(discount_applied) AS avg_discount FROM fact_sales_performance;
-run_mode_3_1789108819,Mode 3 (Naive Vector RAG),42,Q04,Category A — Simple Aggregations & Groupings,How many transactions were recorded per market type?,False,0,0,1,6951.941,422,59,481,0,1,3,,,UndefinedTable,"relation ""dim_market_type"" does not exist
+authoritative_seed42_mode_3,Mode 3 (Naive Vector RAG),42,Q04,Category A — Simple Aggregations & Groupings,How many transactions were recorded per market type?,False,0,0,1,6800.002,422.0,59.0,481,0,1,3,,,UndefinedTable,"relation ""dim_market_type"" does not exist
 LINE 4: JOIN dim_market_type AS mt ON dg.market_type = mt.market_typ...
              ^","SELECT mt.market_type, COUNT(*) AS transaction_count
 FROM fact_sales_performance AS fp
 JOIN dim_geography AS dg ON fp.geo_key = dg.geo_key
 JOIN dim_market_type AS mt ON dg.market_type = mt.market_type
 GROUP BY mt.market_type;","SELECT g.market_type, COUNT(*) AS transaction_count FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.market_type;"
-run_mode_3_1789108819,Mode 3 (Naive Vector RAG),42,Q05,Category A — Simple Aggregations & Groupings,What is the total net profit by calendar quarter in 2025?,True,0,0,1,6709.617,442,56,498,0,0,3,NAIVE_STORED,,,,"SELECT calendar_quarter, SUM(net_profit) AS total_net_profit
+authoritative_seed42_mode_3,Mode 3 (Naive Vector RAG),42,Q05,Category A — Simple Aggregations & Groupings,What is the total net profit by calendar quarter in 2025?,True,0,0,1,6617.528,442.0,56.0,498,0,0,3,NAIVE_STORED,,,,"SELECT calendar_quarter, SUM(net_profit) AS total_net_profit
 FROM fact_sales_performance AS fp
 JOIN dim_time AS dt ON fp.time_key = dt.time_key
 WHERE calendar_year = 2025
 GROUP BY calendar_quarter;","SELECT t.calendar_quarter, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY t.calendar_quarter ORDER BY t.calendar_quarter;"
-run_mode_3_1789108819,Mode 3 (Naive Vector RAG),42,Q06,Category B — Multi-Table Analytical Joins,What is the total gross revenue by geographic region?,True,1,0,1,6282.545,462,47,509,0,0,3,NAIVE_STORED,,,,"SELECT region, SUM(gross_revenue) AS total_gross_revenue
+authoritative_seed42_mode_3,Mode 3 (Naive Vector RAG),42,Q06,Category B — Multi-Table Analytical Joins,What is the total gross revenue by geographic region?,True,1,0,1,6252.091,462.0,47.0,509,0,0,3,NAIVE_STORED,,,,"SELECT region, SUM(gross_revenue) AS total_gross_revenue
 FROM fact_sales_performance AS fp
 JOIN dim_geography AS dg ON fp.geo_key = dg.geo_key
 GROUP BY region;","SELECT g.region, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.region;"
-run_mode_3_1789108819,Mode 3 (Naive Vector RAG),42,Q07,Category B — Multi-Table Analytical Joins,What is the total net profit by product category and market type?,True,1,0,1,7295.539,503,68,571,0,0,3,NAIVE_STORED,,,,"SELECT dp.category, dg.market_type, SUM(fp.net_profit) AS total_net_profit
+authoritative_seed42_mode_3,Mode 3 (Naive Vector RAG),42,Q07,Category B — Multi-Table Analytical Joins,What is the total net profit by product category and market type?,True,1,0,1,7107.44,503.0,68.0,571,0,0,3,NAIVE_STORED,,,,"SELECT dp.category, dg.market_type, SUM(fp.net_profit) AS total_net_profit
 FROM fact_sales_performance AS fp
 JOIN dim_product AS dp ON fp.product_key = dp.product_key
 JOIN dim_geography AS dg ON fp.geo_key = dg.geo_key
 GROUP BY dp.category, dg.market_type;","SELECT p.category, g.market_type, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY p.category, g.market_type;"
-run_mode_3_1789108819,Mode 3 (Naive Vector RAG),42,Q08,Category B — Multi-Table Analytical Joins,What is the total units sold by region and calendar month in 2025?,True,1,0,1,7772.984,538,79,617,0,0,3,NAIVE_STORED,,,,"SELECT dg.region, dt.calendar_month, SUM(fp.units_sold) AS total_units_sold
+authoritative_seed42_mode_3,Mode 3 (Naive Vector RAG),42,Q08,Category B — Multi-Table Analytical Joins,What is the total units sold by region and calendar month in 2025?,True,1,0,1,7644.161,538.0,79.0,617,0,0,3,NAIVE_STORED,,,,"SELECT dg.region, dt.calendar_month, SUM(fp.units_sold) AS total_units_sold
 FROM fact_sales_performance AS fp
 JOIN dim_geography AS dg ON fp.geo_key = dg.geo_key
 JOIN dim_time AS dt ON fp.time_key = dt.time_key
 WHERE dt.calendar_year = 2025
 GROUP BY dg.region, dt.calendar_month;","SELECT g.region, t.calendar_month, SUM(f.units_sold) AS total_units FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY g.region, t.calendar_month;"
-run_mode_3_1789108819,Mode 3 (Naive Vector RAG),42,Q09,Category B — Multi-Table Analytical Joins,What is the total gross revenue and net profit for Hardware category by region?,True,1,0,1,7687.452,519,81,600,0,0,3,NAIVE_STORED,,,,"SELECT dg.region, SUM(fp.gross_revenue) AS total_gross_revenue, SUM(fp.net_profit) AS total_net_profit
+authoritative_seed42_mode_3,Mode 3 (Naive Vector RAG),42,Q09,Category B — Multi-Table Analytical Joins,What is the total gross revenue and net profit for Hardware category by region?,True,1,0,1,7613.038,519.0,81.0,600,0,0,3,NAIVE_STORED,,,,"SELECT dg.region, SUM(fp.gross_revenue) AS total_gross_revenue, SUM(fp.net_profit) AS total_net_profit
 FROM fact_sales_performance AS fp
 JOIN dim_product AS dp ON fp.product_key = dp.product_key
 JOIN dim_geography AS dg ON fp.geo_key = dg.geo_key
 WHERE dp.category = 'Hardware'
 GROUP BY dg.region;","SELECT g.region, SUM(f.gross_revenue) AS total_revenue, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key JOIN dim_product p ON f.product_key = p.product_key WHERE p.category = 'Hardware' GROUP BY g.region;"
-run_mode_3_1789108819,Mode 3 (Naive Vector RAG),42,Q10,Category B — Multi-Table Analytical Joins,What is the average discount applied per product sub-category in the Enterprise market?,True,1,0,1,7398.455,513,72,585,0,0,3,NAIVE_STORED,,,,"SELECT dp.sub_category, AVG(fp.discount_applied) AS average_discount_applied
+authoritative_seed42_mode_3,Mode 3 (Naive Vector RAG),42,Q10,Category B — Multi-Table Analytical Joins,What is the average discount applied per product sub-category in the Enterprise market?,True,1,0,1,7248.058,513.0,72.0,585,0,0,3,NAIVE_STORED,,,,"SELECT dp.sub_category, AVG(fp.discount_applied) AS average_discount_applied
 FROM fact_sales_performance AS fp
 JOIN dim_product AS dp ON fp.product_key = dp.product_key
 JOIN dim_geography AS dg ON fp.geo_key = dg.geo_key
 WHERE dg.market_type = 'Enterprise'
 GROUP BY dp.sub_category;","SELECT p.sub_category, AVG(f.discount_applied) AS avg_discount FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.market_type = 'Enterprise' GROUP BY p.sub_category;"
-run_mode_3_1789108819,Mode 3 (Naive Vector RAG),42,Q11,Category B — Multi-Table Analytical Joins,What is the total net profit by day of the week for the Commercial market type?,True,1,0,1,7475.579,605,72,677,0,0,3,NAIVE_STORED,,,,"SELECT dt.day_of_week, SUM(fp.net_profit) AS total_net_profit
+authoritative_seed42_mode_3,Mode 3 (Naive Vector RAG),42,Q11,Category B — Multi-Table Analytical Joins,What is the total net profit by day of the week for the Commercial market type?,True,1,0,1,7309.117,605.0,72.0,677,0,0,3,NAIVE_STORED,,,,"SELECT dt.day_of_week, SUM(fp.net_profit) AS total_net_profit
 FROM fact_sales_performance AS fp
-JOIN dim_time AS dt ON fp.time_key = dt.time_key
 JOIN dim_geography AS dg ON fp.geo_key = dg.geo_key
+JOIN dim_time AS dt ON fp.time_key = dt.time_key
 WHERE dg.market_type = 'Commercial'
 GROUP BY dt.day_of_week;","SELECT t.day_of_week, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.market_type = 'Commercial' GROUP BY t.day_of_week;"
-run_mode_3_1789108819,Mode 3 (Naive Vector RAG),42,Q12,Category B — Multi-Table Analytical Joins,What is the total units sold by product name in the EMEA region?,True,1,0,1,7259.724,592,70,662,0,0,3,NAIVE_STORED,,,,"SELECT dp.product_name, SUM(fp.units_sold) AS total_units_sold
+authoritative_seed42_mode_3,Mode 3 (Naive Vector RAG),42,Q12,Category B — Multi-Table Analytical Joins,What is the total units sold by product name in the EMEA region?,True,1,0,1,7208.182,592.0,70.0,662,0,0,3,NAIVE_STORED,,,,"SELECT dp.product_name, SUM(fp.units_sold) AS total_units_sold
 FROM fact_sales_performance AS fp
 JOIN dim_geography AS dg ON fp.geo_key = dg.geo_key
 JOIN dim_product AS dp ON fp.product_key = dp.product_key
 WHERE dg.region = 'EMEA'
 GROUP BY dp.product_name;","SELECT p.product_name, SUM(f.units_sold) AS total_units FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.region = 'EMEA' GROUP BY p.product_name;"
-run_mode_3_1789108819,Mode 3 (Naive Vector RAG),42,Q13,Category B — Multi-Table Analytical Joins,What is the total gross revenue by zone in North America?,True,1,0,1,6872.71,493,58,551,0,0,3,NAIVE_STORED,,,,"SELECT dg.zone, SUM(fp.gross_revenue) AS total_gross_revenue
+authoritative_seed42_mode_3,Mode 3 (Naive Vector RAG),42,Q13,Category B — Multi-Table Analytical Joins,What is the total gross revenue by zone in North America?,True,1,0,1,6721.801,493.0,58.0,551,0,0,3,NAIVE_STORED,,,,"SELECT dg.zone, SUM(fp.gross_revenue) AS total_gross_revenue
 FROM fact_sales_performance AS fp
 JOIN dim_geography AS dg ON fp.geo_key = dg.geo_key
 WHERE dg.region = 'North America'
 GROUP BY dg.zone;","SELECT g.zone, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.region = 'North America' GROUP BY g.zone;"
-run_mode_3_1789108819,Mode 3 (Naive Vector RAG),42,Q14,Category C — Advanced Analytical Queries,Rank product categories by total gross revenue.,True,0,0,1,6914.005,537,58,595,0,0,3,NAIVE_STORED,,,,"SELECT dp.category, SUM(fp.gross_revenue) AS total_gross_revenue
+authoritative_seed42_mode_3,Mode 3 (Naive Vector RAG),42,Q14,Category C — Advanced Analytical Queries,Rank product categories by total gross revenue.,True,0,0,1,6898.245,537.0,58.0,595,0,0,3,NAIVE_STORED,,,,"SELECT dp.category, SUM(fp.gross_revenue) AS total_gross_revenue
 FROM fact_sales_performance AS fp
 JOIN dim_product AS dp ON fp.product_key = dp.product_key
 GROUP BY dp.category
 ORDER BY total_gross_revenue DESC;","SELECT p.category, SUM(f.gross_revenue) AS total_revenue, RANK() OVER (ORDER BY SUM(f.gross_revenue) DESC) AS revenue_rank FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
-run_mode_3_1789108819,Mode 3 (Naive Vector RAG),42,Q15,Category C — Advanced Analytical Queries,Calculate the running total of gross revenue across calendar months of 2025.,False,0,0,1,7921.216,527,83,610,0,1,3,,,GroupingError,"column ""fp.gross_revenue"" must appear in the GROUP BY clause or be used in an aggregate function
+authoritative_seed42_mode_3,Mode 3 (Naive Vector RAG),42,Q15,Category C — Advanced Analytical Queries,Calculate the running total of gross revenue across calendar months of 2025.,False,0,0,1,7713.135,527.0,83.0,610,0,1,3,,,GroupingError,"column ""fp.gross_revenue"" must appear in the GROUP BY clause or be used in an aggregate function
 LINE 3:     SUM(fp.gross_revenue) OVER (ORDER BY dt.calendar_month) ...
                 ^","SELECT 
     dt.calendar_month, 
@@ -613,13 +609,13 @@ WHERE
     dt.calendar_year = 2025
 GROUP BY 
     dt.calendar_month;","SELECT t.calendar_month, SUM(f.gross_revenue) AS monthly_revenue, SUM(SUM(f.gross_revenue)) OVER (ORDER BY t.calendar_month) AS running_total FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY t.calendar_month ORDER BY t.calendar_month;"
-run_mode_3_1789108819,Mode 3 (Naive Vector RAG),42,Q16,Category C — Advanced Analytical Queries,What are the top 3 products by total net profit?,True,1,0,1,6943.293,555,58,613,0,0,3,NAIVE_STORED,,,,"SELECT dp.product_name, SUM(fp.net_profit) AS total_net_profit
+authoritative_seed42_mode_3,Mode 3 (Naive Vector RAG),42,Q16,Category C — Advanced Analytical Queries,What are the top 3 products by total net profit?,True,1,0,1,6848.489,555.0,58.0,613,0,0,3,NAIVE_STORED,,,,"SELECT dp.product_name, SUM(fp.net_profit) AS total_net_profit
 FROM fact_sales_performance AS fp
 JOIN dim_product AS dp ON fp.product_key = dp.product_key
 GROUP BY dp.product_name
 ORDER BY total_net_profit DESC
 LIMIT 3;","SELECT p.product_name, SUM(f.net_profit) AS total_net_profit FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.product_name ORDER BY total_net_profit DESC LIMIT 3;"
-run_mode_3_1789108819,Mode 3 (Naive Vector RAG),42,Q17,Category C — Advanced Analytical Queries,Show monthly gross revenue along with previous month gross revenue in 2025 using LAG.,True,0,0,1,9081.863,553,117,670,0,0,3,NAIVE_STORED,,,,"SELECT 
+authoritative_seed42_mode_3,Mode 3 (Naive Vector RAG),42,Q17,Category C — Advanced Analytical Queries,Show monthly gross revenue along with previous month gross revenue in 2025 using LAG.,True,0,0,1,8908.31,553.0,117.0,670,0,0,3,NAIVE_STORED,,,,"SELECT 
     dt.calendar_month, 
     SUM(fp.gross_revenue) AS current_month_gross_revenue, 
     LAG(SUM(fp.gross_revenue), 1, 0) OVER (ORDER BY dt.calendar_month) AS previous_month_gross_revenue
@@ -633,12 +629,12 @@ GROUP BY
     dt.calendar_month
 ORDER BY 
     dt.calendar_month;","SELECT t.calendar_month, SUM(f.gross_revenue) AS current_month_revenue, LAG(SUM(f.gross_revenue)) OVER (ORDER BY t.calendar_month) AS prev_month_revenue FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY t.calendar_month ORDER BY t.calendar_month;"
-run_mode_3_1789108819,Mode 3 (Naive Vector RAG),42,Q18,Category C — Advanced Analytical Queries,"For each product category, rank products by total units sold.",True,0,0,1,6982.737,515,63,578,0,0,3,NAIVE_STORED,,,,"SELECT dp.category, dp.product_name, SUM(fp.units_sold) AS total_units_sold
+authoritative_seed42_mode_3,Mode 3 (Naive Vector RAG),42,Q18,Category C — Advanced Analytical Queries,"For each product category, rank products by total units sold.",True,0,0,1,6836.454,515.0,63.0,578,0,0,3,NAIVE_STORED,,,,"SELECT dp.category, dp.product_name, SUM(fp.units_sold) AS total_units_sold
 FROM fact_sales_performance AS fp
 JOIN dim_product AS dp ON fp.product_key = dp.product_key
 GROUP BY dp.category, dp.product_name
 ORDER BY dp.category, total_units_sold DESC;","SELECT p.category, p.product_name, SUM(f.units_sold) AS total_units, RANK() OVER (PARTITION BY p.category ORDER BY SUM(f.units_sold) DESC) AS rank_in_category FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category, p.product_name;"
-run_mode_3_1789108819,Mode 3 (Naive Vector RAG),42,Q19,Category C — Advanced Analytical Queries,What is the percentage contribution of each region to total gross revenue?,True,0,0,1,7611.281,530,78,608,0,0,3,NAIVE_STORED,,,,"SELECT 
+authoritative_seed42_mode_3,Mode 3 (Naive Vector RAG),42,Q19,Category C — Advanced Analytical Queries,What is the percentage contribution of each region to total gross revenue?,True,0,0,1,7578.46,530.0,78.0,608,0,0,3,NAIVE_STORED,,,,"SELECT 
     dg.region, 
     (100.0 * SUM(fp.gross_revenue) / SUM(SUM(fp.gross_revenue)) OVER ()) AS gross_revenue_percentage
 FROM 
@@ -647,32 +643,32 @@ JOIN
     dim_geography AS dg ON fp.geo_key = dg.geo_key
 GROUP BY 
     dg.region;","SELECT g.region, SUM(f.gross_revenue) AS region_revenue, ROUND((SUM(f.gross_revenue) * 100.0 / SUM(SUM(f.gross_revenue)) OVER ()), 2) AS pct_of_total FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.region;"
-run_mode_3_1789108819,Mode 3 (Naive Vector RAG),42,Q20,Category D — Semantic / Schema Trap Queries,What is the total revenue by region?,True,1,0,1,6289.064,520,45,565,0,0,3,NAIVE_STORED,,,,"SELECT region, SUM(gross_revenue) AS total_revenue
+authoritative_seed42_mode_3,Mode 3 (Naive Vector RAG),42,Q20,Category D — Semantic / Schema Trap Queries,What is the total revenue by region?,True,1,0,1,6224.781,520.0,45.0,565,0,0,3,NAIVE_STORED,,,,"SELECT region, SUM(gross_revenue) AS total_revenue
 FROM fact_sales_performance AS fp
 JOIN dim_geography AS dg ON fp.geo_key = dg.geo_key
 GROUP BY region;","SELECT g.region, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.region;"
-run_mode_3_1789108819,Mode 3 (Naive Vector RAG),42,Q21,Category D — Semantic / Schema Trap Queries,Show total discount by product category.,True,1,0,1,6400.27,541,45,586,0,0,3,NAIVE_STORED,,,,"SELECT dp.category, SUM(fp.discount_applied) AS total_discount
+authoritative_seed42_mode_3,Mode 3 (Naive Vector RAG),42,Q21,Category D — Semantic / Schema Trap Queries,Show total discount by product category.,True,1,0,1,6352.562,541.0,45.0,586,0,0,3,NAIVE_STORED,,,,"SELECT dp.category, SUM(fp.discount_applied) AS total_discount
 FROM fact_sales_performance AS fp
 JOIN dim_product AS dp ON fp.product_key = dp.product_key
 GROUP BY dp.category;","SELECT p.category, SUM(f.discount_applied) AS total_discount_applied FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
-run_mode_3_1789108819,Mode 3 (Naive Vector RAG),42,Q22,Category D — Semantic / Schema Trap Queries,What is the total profit for each product category?,True,1,0,1,6331.986,509,44,553,0,0,3,NAIVE_STORED,,,,"SELECT dp.category, SUM(fp.net_profit) AS total_profit
+authoritative_seed42_mode_3,Mode 3 (Naive Vector RAG),42,Q22,Category D — Semantic / Schema Trap Queries,What is the total profit for each product category?,True,1,0,1,6245.011,509.0,44.0,553,0,0,3,NAIVE_STORED,,,,"SELECT dp.category, SUM(fp.net_profit) AS total_profit
 FROM fact_sales_performance AS fp
 JOIN dim_product AS dp ON fp.product_key = dp.product_key
 GROUP BY dp.category;","SELECT p.category, SUM(f.net_profit) AS total_net_profit FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
-run_mode_3_1789108819,Mode 3 (Naive Vector RAG),42,Q23,Category D — Semantic / Schema Trap Queries,What is the average cost of products in each sub-category?,True,1,0,1,5665.504,505,32,537,0,0,3,NAIVE_STORED,,,,"SELECT dp.sub_category, AVG(dp.unit_cost) AS average_unit_cost
+authoritative_seed42_mode_3,Mode 3 (Naive Vector RAG),42,Q23,Category D — Semantic / Schema Trap Queries,What is the average cost of products in each sub-category?,True,1,0,1,5757.474,505.0,32.0,537,0,0,3,NAIVE_STORED,,,,"SELECT dp.sub_category, AVG(dp.unit_cost) AS average_unit_cost
 FROM dim_product AS dp
 GROUP BY dp.sub_category;","SELECT p.sub_category, AVG(p.unit_cost) AS avg_unit_cost FROM dim_product p GROUP BY p.sub_category;"
-run_mode_3_1789108819,Mode 3 (Naive Vector RAG),42,Q24,Category D — Semantic / Schema Trap Queries,What is the total gross revenue by market?,True,1,0,1,6485.49,447,49,496,0,0,3,NAIVE_STORED,,,,"SELECT market_type, SUM(gross_revenue) AS total_gross_revenue
+authoritative_seed42_mode_3,Mode 3 (Naive Vector RAG),42,Q24,Category D — Semantic / Schema Trap Queries,What is the total gross revenue by market?,True,1,0,1,6385.24,447.0,49.0,496,0,0,3,NAIVE_STORED,,,,"SELECT market_type, SUM(gross_revenue) AS total_gross_revenue
 FROM fact_sales_performance AS fp
 JOIN dim_geography AS dg ON fp.geo_key = dg.geo_key
 GROUP BY market_type;","SELECT g.market_type, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.market_type;"
-run_mode_3_1789108819,Mode 3 (Naive Vector RAG),42,Q25,Category D — Semantic / Schema Trap Queries,What is the total profit and total revenue for each market type?,True,0,0,1,6898.338,500,59,559,0,0,3,NAIVE_STORED,,,,"SELECT dg.market_type, SUM(fp.net_profit) AS total_profit, SUM(fp.gross_revenue) AS total_revenue
+authoritative_seed42_mode_3,Mode 3 (Naive Vector RAG),42,Q25,Category D — Semantic / Schema Trap Queries,What is the total profit and total revenue for each market type?,True,0,0,1,6692.857,500.0,59.0,559,0,0,3,NAIVE_STORED,,,,"SELECT dg.market_type, SUM(fp.net_profit) AS total_profit, SUM(fp.gross_revenue) AS total_revenue
 FROM fact_sales_performance AS fp
 JOIN dim_geography AS dg ON fp.geo_key = dg.geo_key
 GROUP BY dg.market_type;","SELECT g.market_type, SUM(f.gross_revenue) AS total_gross_revenue, SUM(f.net_profit) AS total_net_profit FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.market_type;"
-run_mode_4_1789108991,Mode 4 (Full ARMG),42,Q01,Category A — Simple Aggregations & Groupings,What is the total gross revenue across all transactions?,True,1,0,1,3280.707,,,378,0,0,0,,,,,"SELECT SUM(gross_revenue) AS total_gross_revenue
+authoritative_seed42_mode_5,Mode 5 (ARMG - Negative Constraints),42,Q01,Category A — Simple Aggregations & Groupings,What is the total gross revenue across all transactions?,True,1,0,1,3280.123,,,378,0,0,0,,,,,"SELECT SUM(gross_revenue) AS total_gross_revenue
 FROM fact_sales_performance;",SELECT SUM(gross_revenue) AS total_gross_revenue FROM fact_sales_performance;
-run_mode_4_1789108991,Mode 4 (Full ARMG),42,Q02,Category A — Simple Aggregations & Groupings,What is the total units sold by product category?,True,1,0,1,4381.762,,,330,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_5,Mode 5 (ARMG - Negative Constraints),42,Q02,Category A — Simple Aggregations & Groupings,What is the total units sold by product category?,True,1,0,1,4353.662,,,330,0,0,0,,,,,"SELECT 
     category,
     SUM(units_sold) AS total_units_sold
 FROM 
@@ -683,18 +679,18 @@ ON
     fact_sales_performance.product_key = dim_product.product_key
 GROUP BY 
     category;","SELECT p.category, SUM(f.units_sold) AS total_units FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
-run_mode_4_1789108991,Mode 4 (Full ARMG),42,Q03,Category A — Simple Aggregations & Groupings,What is the average discount applied across all transactions?,True,1,0,1,3081.409,,,375,0,0,0,,,,,"SELECT AVG(discount_applied) AS average_discount
+authoritative_seed42_mode_5,Mode 5 (ARMG - Negative Constraints),42,Q03,Category A — Simple Aggregations & Groupings,What is the average discount applied across all transactions?,True,1,0,1,3020.054,,,375,0,0,0,,,,,"SELECT AVG(discount_applied) AS average_discount
 FROM fact_sales_performance;",SELECT AVG(discount_applied) AS avg_discount FROM fact_sales_performance;
-run_mode_4_1789108991,Mode 4 (Full ARMG),42,Q04,Category A — Simple Aggregations & Groupings,How many transactions were recorded per market type?,True,1,1,2,11157.523,,,818,0,0,0,ADMITTED,,,,"SELECT 
+authoritative_seed42_mode_5,Mode 5 (ARMG - Negative Constraints),42,Q04,Category A — Simple Aggregations & Groupings,How many transactions were recorded per market type?,True,1,1,2,10934.052,,,742,0,0,0,ADMITTED,,,,"SELECT 
     dg.market_type, 
-    COUNT(fp.fact_key) AS transactions
+    COUNT(fp.fact_key) AS transactions_count
 FROM 
     fact_sales_performance fp
 JOIN 
     dim_geography dg ON fp.geo_key = dg.geo_key
 GROUP BY 
     dg.market_type;","SELECT g.market_type, COUNT(*) AS transaction_count FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.market_type;"
-run_mode_4_1789108991,Mode 4 (Full ARMG),42,Q05,Category A — Simple Aggregations & Groupings,What is the total net profit by calendar quarter in 2025?,True,0,0,1,7240.424,,,360,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_5,Mode 5 (ARMG - Negative Constraints),42,Q05,Category A — Simple Aggregations & Groupings,What is the total net profit by calendar quarter in 2025?,True,0,0,1,7230.833,,,360,0,0,0,,,,,"SELECT 
     t.calendar_quarter, 
     SUM(fp.net_profit) AS total_net_profit
 FROM 
@@ -705,7 +701,7 @@ WHERE
     t.calendar_year = 2025
 GROUP BY 
     t.calendar_quarter;","SELECT t.calendar_quarter, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY t.calendar_quarter ORDER BY t.calendar_quarter;"
-run_mode_4_1789108991,Mode 4 (Full ARMG),42,Q06,Category B — Multi-Table Analytical Joins,What is the total gross revenue by geographic region?,True,1,0,1,6676.422,,,329,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_5,Mode 5 (ARMG - Negative Constraints),42,Q06,Category B — Multi-Table Analytical Joins,What is the total gross revenue by geographic region?,True,1,0,1,6523.316,,,329,0,0,0,,,,,"SELECT 
     d.region, 
     SUM(f.gross_revenue) AS total_gross_revenue
 FROM 
@@ -714,7 +710,7 @@ JOIN
     dim_geography d ON f.geo_key = d.geo_key
 GROUP BY 
     d.region;","SELECT g.region, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.region;"
-run_mode_4_1789108991,Mode 4 (Full ARMG),42,Q07,Category B — Multi-Table Analytical Joins,What is the total net profit by product category and market type?,True,1,0,1,7614.895,,,393,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_5,Mode 5 (ARMG - Negative Constraints),42,Q07,Category B — Multi-Table Analytical Joins,What is the total net profit by product category and market type?,True,1,0,1,7544.621,,,393,0,0,0,,,,,"SELECT 
     dp.category, 
     dg.market_type, 
     SUM(fs.net_profit) AS total_net_profit
@@ -727,21 +723,21 @@ JOIN
 GROUP BY 
     dp.category, 
     dg.market_type;","SELECT p.category, g.market_type, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY p.category, g.market_type;"
-run_mode_4_1789108991,Mode 4 (Full ARMG),42,Q08,Category B — Multi-Table Analytical Joins,What is the total units sold by region and calendar month in 2025?,True,1,0,1,8025.943,,,414,0,0,1,,,,,"SELECT 
+authoritative_seed42_mode_5,Mode 5 (ARMG - Negative Constraints),42,Q08,Category B — Multi-Table Analytical Joins,What is the total units sold by region and calendar month in 2025?,True,1,0,1,7892.588,,,414,0,0,1,,,,,"SELECT 
     d.region,
     dt.calendar_month,
-    SUM(fs.units_sold) AS total_units_sold
+    SUM(f.units_sold) AS total_units_sold
 FROM 
-    fact_sales_performance fs
+    fact_sales_performance f
 JOIN 
-    dim_geography d ON fs.geo_key = d.geo_key
+    dim_geography d ON f.geo_key = d.geo_key
 JOIN 
-    dim_time dt ON fs.time_key = dt.time_key
+    dim_time dt ON f.time_key = dt.time_key
 WHERE 
     dt.calendar_year = 2025
 GROUP BY 
     d.region, dt.calendar_month;","SELECT g.region, t.calendar_month, SUM(f.units_sold) AS total_units FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY g.region, t.calendar_month;"
-run_mode_4_1789108991,Mode 4 (Full ARMG),42,Q09,Category B — Multi-Table Analytical Joins,What is the total gross revenue and net profit for Hardware category by region?,True,1,0,1,8140.353,,,406,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_5,Mode 5 (ARMG - Negative Constraints),42,Q09,Category B — Multi-Table Analytical Joins,What is the total gross revenue and net profit for Hardware category by region?,True,1,0,1,7864.047,,,406,0,0,0,,,,,"SELECT 
     d.region,
     SUM(fp.gross_revenue) AS total_gross_revenue,
     SUM(fp.net_profit) AS total_net_profit
@@ -755,7 +751,7 @@ WHERE
     p.category = 'Hardware'
 GROUP BY 
     d.region;","SELECT g.region, SUM(f.gross_revenue) AS total_revenue, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key JOIN dim_product p ON f.product_key = p.product_key WHERE p.category = 'Hardware' GROUP BY g.region;"
-run_mode_4_1789108991,Mode 4 (Full ARMG),42,Q10,Category B — Multi-Table Analytical Joins,What is the average discount applied per product sub-category in the Enterprise market?,True,1,0,1,7801.185,,,400,0,0,1,,,,,"SELECT 
+authoritative_seed42_mode_5,Mode 5 (ARMG - Negative Constraints),42,Q10,Category B — Multi-Table Analytical Joins,What is the average discount applied per product sub-category in the Enterprise market?,True,1,0,1,7773.521,,,400,0,0,1,,,,,"SELECT 
     dp.sub_category,
     AVG(fsp.discount_applied) AS avg_discount_applied
 FROM 
@@ -768,269 +764,7 @@ WHERE
     dg.market_type = 'Enterprise'
 GROUP BY 
     dp.sub_category;","SELECT p.sub_category, AVG(f.discount_applied) AS avg_discount FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.market_type = 'Enterprise' GROUP BY p.sub_category;"
-run_mode_4_1789108991,Mode 4 (Full ARMG),42,Q11,Category B — Multi-Table Analytical Joins,What is the total net profit by day of the week for the Commercial market type?,False,0,3,4,26232.552,,,2553,0,1,0,TERMINAL_FAILURE_NOT_ADMITTED,,Semantic,"column g.full_date does not exist
-LINE 7:     dim_geography g ON t.full_date = g.full_date
-                                             ^
-HINT:  Perhaps you meant to reference the column ""t.full_date"".","SELECT 
-    t.day_of_week, 
-    SUM(fp.net_profit) AS total_net_profit
-FROM 
-    dim_time t
-JOIN 
-    dim_geography g ON t.full_date = g.full_date
-JOIN 
-    fact_sales_performance fp ON t.full_date = fp.time_key AND g.geo_key = fp.geo_key
-WHERE 
-    g.market_type = 'Commercial'
-GROUP BY 
-    t.day_of_week;","SELECT t.day_of_week, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.market_type = 'Commercial' GROUP BY t.day_of_week;"
-run_mode_4_1789108991,Mode 4 (Full ARMG),42,Q12,Category B — Multi-Table Analytical Joins,What is the total units sold by product name in the EMEA region?,True,1,0,1,7660.275,,,395,0,0,0,,,,,"SELECT 
-    dp.product_name, 
-    SUM(fs.units_sold) AS total_units_sold
-FROM 
-    fact_sales_performance fs
-JOIN 
-    dim_geography dg ON fs.geo_key = dg.geo_key
-JOIN 
-    dim_product dp ON fs.product_key = dp.product_key
-WHERE 
-    dg.region = 'EMEA'
-GROUP BY 
-    dp.product_name;","SELECT p.product_name, SUM(f.units_sold) AS total_units FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.region = 'EMEA' GROUP BY p.product_name;"
-run_mode_4_1789108991,Mode 4 (Full ARMG),42,Q13,Category B — Multi-Table Analytical Joins,What is the total gross revenue by zone in North America?,True,1,1,2,13386.278,,,840,0,0,0,ADMITTED,,,,"SELECT g.zone, SUM(f.gross_revenue) AS total_gross_revenue
-FROM fact_sales_performance f
-JOIN dim_geography g ON f.geo_key = g.geo_key
-WHERE g.region = 'North America'
-GROUP BY g.zone;","SELECT g.zone, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.region = 'North America' GROUP BY g.zone;"
-run_mode_4_1789108991,Mode 4 (Full ARMG),42,Q14,Category C — Advanced Analytical Queries,Rank product categories by total gross revenue.,True,0,0,1,7054.042,,,340,0,0,0,,,,,"SELECT 
-    category, 
-    SUM(gross_revenue) AS total_gross_revenue
-FROM 
-    dim_product p
-JOIN 
-    fact_sales_performance f ON p.product_key = f.product_key
-GROUP BY 
-    category
-ORDER BY 
-    total_gross_revenue DESC;","SELECT p.category, SUM(f.gross_revenue) AS total_revenue, RANK() OVER (ORDER BY SUM(f.gross_revenue) DESC) AS revenue_rank FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
-run_mode_4_1789108991,Mode 4 (Full ARMG),42,Q15,Category C — Advanced Analytical Queries,Calculate the running total of gross revenue across calendar months of 2025.,True,0,1,2,15369.169,,,969,0,0,0,ADMITTED,,,,"SELECT 
-    calendar_month,
-    SUM(gross_revenue) AS running_total_gross_revenue
-FROM 
-    fact_sales_performance 
-JOIN 
-    dim_time ON fact_sales_performance.time_key = dim_time.time_key
-WHERE 
-    dim_time.calendar_year = 2025
-GROUP BY 
-    calendar_month
-ORDER BY 
-    calendar_month;","SELECT t.calendar_month, SUM(f.gross_revenue) AS monthly_revenue, SUM(SUM(f.gross_revenue)) OVER (ORDER BY t.calendar_month) AS running_total FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY t.calendar_month ORDER BY t.calendar_month;"
-run_mode_4_1789108991,Mode 4 (Full ARMG),42,Q16,Category C — Advanced Analytical Queries,What are the top 3 products by total net profit?,True,1,0,1,7133.92,,,347,0,0,1,,,,,"SELECT 
-    p.product_name, 
-    SUM(fp.net_profit) AS total_net_profit
-FROM 
-    dim_product p
-JOIN 
-    fact_sales_performance fp ON p.product_key = fp.product_key
-GROUP BY 
-    p.product_name
-ORDER BY 
-    total_net_profit DESC
-LIMIT 3;","SELECT p.product_name, SUM(f.net_profit) AS total_net_profit FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.product_name ORDER BY total_net_profit DESC LIMIT 3;"
-run_mode_4_1789108991,Mode 4 (Full ARMG),42,Q17,Category C — Advanced Analytical Queries,Show monthly gross revenue along with previous month gross revenue in 2025 using LAG.,True,0,1,2,15848.332,,,1210,0,0,3,EXISTING_REINFORCED,mem-18fc8e84,,,"SELECT 
-    dt.calendar_month,
-    fsp.gross_revenue,
-    LAG(fsp.gross_revenue) OVER (ORDER BY dt.calendar_month) AS prev_month_gross_revenue
-FROM 
-    fact_sales_performance fsp
-JOIN 
-    dim_time dt ON fsp.time_key = dt.time_key
-WHERE 
-    dt.calendar_year = 2025
-GROUP BY 
-    dt.calendar_month, fsp.gross_revenue
-ORDER BY 
-    dt.calendar_month;","SELECT t.calendar_month, SUM(f.gross_revenue) AS current_month_revenue, LAG(SUM(f.gross_revenue)) OVER (ORDER BY t.calendar_month) AS prev_month_revenue FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY t.calendar_month ORDER BY t.calendar_month;"
-run_mode_4_1789108991,Mode 4 (Full ARMG),42,Q18,Category C — Advanced Analytical Queries,"For each product category, rank products by total units sold.",True,0,0,1,7055.907,,,346,0,0,3,,,,,"SELECT 
-    category,
-    product_name,
-    SUM(units_sold) AS total_units_sold
-FROM 
-    dim_product p
-JOIN 
-    fact_sales_performance f ON p.product_key = f.product_key
-GROUP BY 
-    category, product_name
-ORDER BY 
-    category, total_units_sold DESC;","SELECT p.category, p.product_name, SUM(f.units_sold) AS total_units, RANK() OVER (PARTITION BY p.category ORDER BY SUM(f.units_sold) DESC) AS rank_in_category FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category, p.product_name;"
-run_mode_4_1789108991,Mode 4 (Full ARMG),42,Q19,Category C — Advanced Analytical Queries,What is the percentage contribution of each region to total gross revenue?,True,0,0,1,8060.995,,,368,0,0,1,,,,,"SELECT 
-    region,
-    (SUM(gross_revenue) * 100.0 / (SELECT SUM(gross_revenue) FROM fact_sales_performance JOIN dim_geography ON fact_sales_performance.geo_key = dim_geography.geo_key)) AS revenue_percentage
-FROM 
-    fact_sales_performance 
-JOIN 
-    dim_geography 
-ON 
-    fact_sales_performance.geo_key = dim_geography.geo_key
-GROUP BY 
-    region;","SELECT g.region, SUM(f.gross_revenue) AS region_revenue, ROUND((SUM(f.gross_revenue) * 100.0 / SUM(SUM(f.gross_revenue)) OVER ()), 2) AS pct_of_total FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.region;"
-run_mode_4_1789108991,Mode 4 (Full ARMG),42,Q20,Category D — Semantic / Schema Trap Queries,What is the total revenue by region?,True,1,0,1,6585.353,,,325,0,0,1,,,,,"SELECT 
-    d.region, 
-    SUM(f.gross_revenue) AS total_revenue
-FROM 
-    fact_sales_performance f
-JOIN 
-    dim_geography d ON f.geo_key = d.geo_key
-GROUP BY 
-    d.region;","SELECT g.region, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.region;"
-run_mode_4_1789108991,Mode 4 (Full ARMG),42,Q21,Category D — Semantic / Schema Trap Queries,Show total discount by product category.,True,1,0,1,6327.871,,,326,0,0,1,,,,,"SELECT 
-    p.category,
-    SUM(f.discount_applied) AS total_discount
-FROM 
-    fact_sales_performance f
-JOIN 
-    dim_product p ON f.product_key = p.product_key
-GROUP BY 
-    p.category;","SELECT p.category, SUM(f.discount_applied) AS total_discount_applied FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
-run_mode_4_1789108991,Mode 4 (Full ARMG),42,Q22,Category D — Semantic / Schema Trap Queries,What is the total profit for each product category?,True,1,0,1,6489.102,,,330,0,0,1,,,,,"SELECT 
-    category, 
-    SUM(net_profit) AS total_profit
-FROM 
-    fact_sales_performance 
-JOIN 
-    dim_product 
-ON 
-    fact_sales_performance.product_key = dim_product.product_key
-GROUP BY 
-    category;","SELECT p.category, SUM(f.net_profit) AS total_net_profit FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
-run_mode_4_1789108991,Mode 4 (Full ARMG),42,Q23,Category D — Semantic / Schema Trap Queries,What is the average cost of products in each sub-category?,True,1,0,1,5857.582,,,313,0,0,1,,,,,"SELECT 
-    sub_category, 
-    AVG(unit_cost) AS average_cost
-FROM 
-    dim_product
-GROUP BY 
-    sub_category;","SELECT p.sub_category, AVG(p.unit_cost) AS avg_unit_cost FROM dim_product p GROUP BY p.sub_category;"
-run_mode_4_1789108991,Mode 4 (Full ARMG),42,Q24,Category D — Semantic / Schema Trap Queries,What is the total gross revenue by market?,True,1,0,1,6919.233,,,330,0,0,1,,,,,"SELECT 
-    m.market_type, 
-    SUM(f.gross_revenue) AS total_gross_revenue
-FROM 
-    fact_sales_performance f
-JOIN 
-    dim_geography m ON f.geo_key = m.geo_key
-GROUP BY 
-    m.market_type;","SELECT g.market_type, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.market_type;"
-run_mode_4_1789108991,Mode 4 (Full ARMG),42,Q25,Category D — Semantic / Schema Trap Queries,What is the total profit and total revenue for each market type?,True,0,0,1,8090.968,,,364,0,0,1,,,,,"SELECT 
-    mt.market_type,
-    SUM(sp.net_profit) AS total_profit,
-    SUM(sp.gross_revenue) AS total_revenue
-FROM 
-    fact_sales_performance sp
-JOIN 
-    dim_geography dg ON sp.geo_key = dg.geo_key
-JOIN 
-    (SELECT DISTINCT market_type FROM dim_geography) mt ON dg.market_type = mt.market_type
-GROUP BY 
-    mt.market_type;","SELECT g.market_type, SUM(f.gross_revenue) AS total_gross_revenue, SUM(f.net_profit) AS total_net_profit FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.market_type;"
-run_mode_5_1789109207,Mode 5 (ARMG - Negative Constraints),42,Q01,Category A — Simple Aggregations & Groupings,What is the total gross revenue across all transactions?,True,1,0,1,3373.449,,,378,0,0,0,,,,,"SELECT SUM(gross_revenue) AS total_gross_revenue
-FROM fact_sales_performance;",SELECT SUM(gross_revenue) AS total_gross_revenue FROM fact_sales_performance;
-run_mode_5_1789109207,Mode 5 (ARMG - Negative Constraints),42,Q02,Category A — Simple Aggregations & Groupings,What is the total units sold by product category?,True,1,0,1,4433.082,,,330,0,0,0,,,,,"SELECT 
-    category,
-    SUM(units_sold) AS total_units_sold
-FROM 
-    fact_sales_performance 
-JOIN 
-    dim_product 
-ON 
-    fact_sales_performance.product_key = dim_product.product_key
-GROUP BY 
-    category;","SELECT p.category, SUM(f.units_sold) AS total_units FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
-run_mode_5_1789109207,Mode 5 (ARMG - Negative Constraints),42,Q03,Category A — Simple Aggregations & Groupings,What is the average discount applied across all transactions?,True,1,0,1,3129.302,,,375,0,0,0,,,,,"SELECT AVG(discount_applied) AS average_discount
-FROM fact_sales_performance;",SELECT AVG(discount_applied) AS avg_discount FROM fact_sales_performance;
-run_mode_5_1789109207,Mode 5 (ARMG - Negative Constraints),42,Q04,Category A — Simple Aggregations & Groupings,How many transactions were recorded per market type?,True,1,1,2,11080.013,,,739,0,0,0,ADMITTED,,,,"SELECT 
-    dg.market_type, 
-    COUNT(fp.fact_key) AS transactions
-FROM 
-    fact_sales_performance fp
-JOIN 
-    dim_geography dg ON fp.geo_key = dg.geo_key
-GROUP BY 
-    dg.market_type;","SELECT g.market_type, COUNT(*) AS transaction_count FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.market_type;"
-run_mode_5_1789109207,Mode 5 (ARMG - Negative Constraints),42,Q05,Category A — Simple Aggregations & Groupings,What is the total net profit by calendar quarter in 2025?,True,0,0,1,7371.279,,,360,0,0,0,,,,,"SELECT 
-    t.calendar_quarter, 
-    SUM(fp.net_profit) AS total_net_profit
-FROM 
-    dim_time t
-JOIN 
-    fact_sales_performance fp ON t.time_key = fp.time_key
-WHERE 
-    t.calendar_year = 2025
-GROUP BY 
-    t.calendar_quarter;","SELECT t.calendar_quarter, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY t.calendar_quarter ORDER BY t.calendar_quarter;"
-run_mode_5_1789109207,Mode 5 (ARMG - Negative Constraints),42,Q06,Category B — Multi-Table Analytical Joins,What is the total gross revenue by geographic region?,True,1,0,1,6732.199,,,329,0,0,0,,,,,"SELECT 
-    d.region, 
-    SUM(f.gross_revenue) AS total_gross_revenue
-FROM 
-    fact_sales_performance f
-JOIN 
-    dim_geography d ON f.geo_key = d.geo_key
-GROUP BY 
-    d.region;","SELECT g.region, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.region;"
-run_mode_5_1789109207,Mode 5 (ARMG - Negative Constraints),42,Q07,Category B — Multi-Table Analytical Joins,What is the total net profit by product category and market type?,True,1,0,1,7590.537,,,393,0,0,0,,,,,"SELECT 
-    dp.category, 
-    dg.market_type, 
-    SUM(fs.net_profit) AS total_net_profit
-FROM 
-    fact_sales_performance fs
-JOIN 
-    dim_geography dg ON fs.geo_key = dg.geo_key
-JOIN 
-    dim_product dp ON fs.product_key = dp.product_key
-GROUP BY 
-    dp.category, 
-    dg.market_type;","SELECT p.category, g.market_type, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY p.category, g.market_type;"
-run_mode_5_1789109207,Mode 5 (ARMG - Negative Constraints),42,Q08,Category B — Multi-Table Analytical Joins,What is the total units sold by region and calendar month in 2025?,True,1,0,1,8000.125,,,414,0,0,1,,,,,"SELECT 
-    d.region,
-    dt.calendar_month,
-    SUM(fs.units_sold) AS total_units_sold
-FROM 
-    fact_sales_performance fs
-JOIN 
-    dim_geography d ON fs.geo_key = d.geo_key
-JOIN 
-    dim_time dt ON fs.time_key = dt.time_key
-WHERE 
-    dt.calendar_year = 2025
-GROUP BY 
-    d.region, dt.calendar_month;","SELECT g.region, t.calendar_month, SUM(f.units_sold) AS total_units FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY g.region, t.calendar_month;"
-run_mode_5_1789109207,Mode 5 (ARMG - Negative Constraints),42,Q09,Category B — Multi-Table Analytical Joins,What is the total gross revenue and net profit for Hardware category by region?,True,1,0,1,8153.205,,,406,0,0,0,,,,,"SELECT 
-    d.region,
-    SUM(fp.gross_revenue) AS total_gross_revenue,
-    SUM(fp.net_profit) AS total_net_profit
-FROM 
-    fact_sales_performance fp
-JOIN 
-    dim_geography d ON fp.geo_key = d.geo_key
-JOIN 
-    dim_product p ON fp.product_key = p.product_key
-WHERE 
-    p.category = 'Hardware'
-GROUP BY 
-    d.region;","SELECT g.region, SUM(f.gross_revenue) AS total_revenue, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key JOIN dim_product p ON f.product_key = p.product_key WHERE p.category = 'Hardware' GROUP BY g.region;"
-run_mode_5_1789109207,Mode 5 (ARMG - Negative Constraints),42,Q10,Category B — Multi-Table Analytical Joins,What is the average discount applied per product sub-category in the Enterprise market?,True,1,0,1,7897.178,,,400,0,0,1,,,,,"SELECT 
-    dp.sub_category,
-    AVG(fsp.discount_applied) AS avg_discount_applied
-FROM 
-    fact_sales_performance fsp
-JOIN 
-    dim_geography dg ON fsp.geo_key = dg.geo_key
-JOIN 
-    dim_product dp ON fsp.product_key = dp.product_key
-WHERE 
-    dg.market_type = 'Enterprise'
-GROUP BY 
-    dp.sub_category;","SELECT p.sub_category, AVG(f.discount_applied) AS avg_discount FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.market_type = 'Enterprise' GROUP BY p.sub_category;"
-run_mode_5_1789109207,Mode 5 (ARMG - Negative Constraints),42,Q11,Category B — Multi-Table Analytical Joins,What is the total net profit by day of the week for the Commercial market type?,False,0,3,4,25686.625,,,2097,0,1,0,TERMINAL_FAILURE_NOT_ADMITTED,,Semantic,"column g.time_key does not exist
+authoritative_seed42_mode_5,Mode 5 (ARMG - Negative Constraints),42,Q11,Category B — Multi-Table Analytical Joins,What is the total net profit by day of the week for the Commercial market type?,False,0,3,4,25078.174,,,2097,0,1,0,TERMINAL_FAILURE_NOT_ADMITTED,,Semantic,"column g.time_key does not exist
 LINE 7:     dim_geography g ON t.time_key = g.time_key
                                             ^
 HINT:  Perhaps you meant to reference the column ""t.time_key"".","SELECT 
@@ -1046,7 +780,7 @@ WHERE
     g.market_type = 'Commercial'
 GROUP BY 
     t.day_of_week;","SELECT t.day_of_week, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.market_type = 'Commercial' GROUP BY t.day_of_week;"
-run_mode_5_1789109207,Mode 5 (ARMG - Negative Constraints),42,Q12,Category B — Multi-Table Analytical Joins,What is the total units sold by product name in the EMEA region?,True,1,0,1,7694.886,,,395,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_5,Mode 5 (ARMG - Negative Constraints),42,Q12,Category B — Multi-Table Analytical Joins,What is the total units sold by product name in the EMEA region?,True,1,0,1,7515.915,,,395,0,0,0,,,,,"SELECT 
     dp.product_name, 
     SUM(fs.units_sold) AS total_units_sold
 FROM 
@@ -1059,36 +793,38 @@ WHERE
     dg.region = 'EMEA'
 GROUP BY 
     dp.product_name;","SELECT p.product_name, SUM(f.units_sold) AS total_units FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.region = 'EMEA' GROUP BY p.product_name;"
-run_mode_5_1789109207,Mode 5 (ARMG - Negative Constraints),42,Q13,Category B — Multi-Table Analytical Joins,What is the total gross revenue by zone in North America?,True,1,1,2,13280.62,,,761,0,0,0,ADMITTED,,,,"SELECT g.zone, SUM(f.gross_revenue) AS total_gross_revenue
+authoritative_seed42_mode_5,Mode 5 (ARMG - Negative Constraints),42,Q13,Category B — Multi-Table Analytical Joins,What is the total gross revenue by zone in North America?,True,1,1,2,13157.008,,,761,0,0,0,ADMITTED,,,,"SELECT g.zone, SUM(f.gross_revenue) AS total_gross_revenue
 FROM fact_sales_performance f
 JOIN dim_geography g ON f.geo_key = g.geo_key
 WHERE g.region = 'North America'
 GROUP BY g.zone;","SELECT g.zone, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.region = 'North America' GROUP BY g.zone;"
-run_mode_5_1789109207,Mode 5 (ARMG - Negative Constraints),42,Q14,Category C — Advanced Analytical Queries,Rank product categories by total gross revenue.,True,0,0,1,7110.402,,,340,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_5,Mode 5 (ARMG - Negative Constraints),42,Q14,Category C — Advanced Analytical Queries,Rank product categories by total gross revenue.,True,0,0,1,7172.554,,,344,0,0,0,,,,,"SELECT 
     category, 
     SUM(gross_revenue) AS total_gross_revenue
 FROM 
-    dim_product p
+    fact_sales_performance 
 JOIN 
-    fact_sales_performance f ON p.product_key = f.product_key
+    dim_product 
+ON 
+    fact_sales_performance.product_key = dim_product.product_key
 GROUP BY 
     category
 ORDER BY 
     total_gross_revenue DESC;","SELECT p.category, SUM(f.gross_revenue) AS total_revenue, RANK() OVER (ORDER BY SUM(f.gross_revenue) DESC) AS revenue_rank FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
-run_mode_5_1789109207,Mode 5 (ARMG - Negative Constraints),42,Q15,Category C — Advanced Analytical Queries,Calculate the running total of gross revenue across calendar months of 2025.,True,0,1,2,15340.877,,,891,0,0,0,ADMITTED,,,,"SELECT 
+authoritative_seed42_mode_5,Mode 5 (ARMG - Negative Constraints),42,Q15,Category C — Advanced Analytical Queries,Calculate the running total of gross revenue across calendar months of 2025.,True,0,1,2,15001.566,,,883,0,0,0,ADMITTED,,,,"SELECT 
     calendar_month,
     SUM(gross_revenue) AS running_total_gross_revenue
 FROM 
-    fact_sales_performance 
+    fact_sales_performance fp
 JOIN 
-    dim_time ON fact_sales_performance.time_key = dim_time.time_key
+    dim_time dt ON fp.time_key = dt.time_key
 WHERE 
-    dim_time.calendar_year = 2025
+    dt.calendar_year = 2025
 GROUP BY 
     calendar_month
 ORDER BY 
     calendar_month;","SELECT t.calendar_month, SUM(f.gross_revenue) AS monthly_revenue, SUM(SUM(f.gross_revenue)) OVER (ORDER BY t.calendar_month) AS running_total FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY t.calendar_month ORDER BY t.calendar_month;"
-run_mode_5_1789109207,Mode 5 (ARMG - Negative Constraints),42,Q16,Category C — Advanced Analytical Queries,What are the top 3 products by total net profit?,True,1,0,1,7168.981,,,347,0,0,1,,,,,"SELECT 
+authoritative_seed42_mode_5,Mode 5 (ARMG - Negative Constraints),42,Q16,Category C — Advanced Analytical Queries,What are the top 3 products by total net profit?,True,1,0,1,7139.508,,,347,0,0,1,,,,,"SELECT 
     p.product_name, 
     SUM(fp.net_profit) AS total_net_profit
 FROM 
@@ -1100,7 +836,7 @@ GROUP BY
 ORDER BY 
     total_net_profit DESC
 LIMIT 3;","SELECT p.product_name, SUM(f.net_profit) AS total_net_profit FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.product_name ORDER BY total_net_profit DESC LIMIT 3;"
-run_mode_5_1789109207,Mode 5 (ARMG - Negative Constraints),42,Q17,Category C — Advanced Analytical Queries,Show monthly gross revenue along with previous month gross revenue in 2025 using LAG.,True,0,1,2,15810.357,,,1132,0,0,3,EXISTING_REINFORCED,mem-773f3b42,,,"SELECT 
+authoritative_seed42_mode_5,Mode 5 (ARMG - Negative Constraints),42,Q17,Category C — Advanced Analytical Queries,Show monthly gross revenue along with previous month gross revenue in 2025 using LAG.,True,0,1,2,15368.09,,,1129,0,0,3,EXISTING_REINFORCED,mem-2829e8e2,,,"SELECT 
     dt.calendar_month,
     fsp.gross_revenue,
     LAG(fsp.gross_revenue) OVER (ORDER BY dt.calendar_month) AS prev_month_gross_revenue
@@ -1114,7 +850,7 @@ GROUP BY
     dt.calendar_month, fsp.gross_revenue
 ORDER BY 
     dt.calendar_month;","SELECT t.calendar_month, SUM(f.gross_revenue) AS current_month_revenue, LAG(SUM(f.gross_revenue)) OVER (ORDER BY t.calendar_month) AS prev_month_revenue FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY t.calendar_month ORDER BY t.calendar_month;"
-run_mode_5_1789109207,Mode 5 (ARMG - Negative Constraints),42,Q18,Category C — Advanced Analytical Queries,"For each product category, rank products by total units sold.",True,0,0,1,7139.829,,,346,0,0,3,,,,,"SELECT 
+authoritative_seed42_mode_5,Mode 5 (ARMG - Negative Constraints),42,Q18,Category C — Advanced Analytical Queries,"For each product category, rank products by total units sold.",True,0,0,1,6980.977,,,346,0,0,3,,,,,"SELECT 
     category,
     product_name,
     SUM(units_sold) AS total_units_sold
@@ -1126,16 +862,18 @@ GROUP BY
     category, product_name
 ORDER BY 
     category, total_units_sold DESC;","SELECT p.category, p.product_name, SUM(f.units_sold) AS total_units, RANK() OVER (PARTITION BY p.category ORDER BY SUM(f.units_sold) DESC) AS rank_in_category FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category, p.product_name;"
-run_mode_5_1789109207,Mode 5 (ARMG - Negative Constraints),42,Q19,Category C — Advanced Analytical Queries,What is the percentage contribution of each region to total gross revenue?,True,0,2,3,17973.812,,,1427,0,0,1,EXISTING_REINFORCED,mem-1304b37d,,,"SELECT 
+authoritative_seed42_mode_5,Mode 5 (ARMG - Negative Constraints),42,Q19,Category C — Advanced Analytical Queries,What is the percentage contribution of each region to total gross revenue?,True,0,0,1,7986.316,,,368,0,0,1,,,,,"SELECT 
     region,
-    (SUM(gross_revenue) * 100.0 / SUM(gross_revenue) OVER ()) AS revenue_percentage
+    (SUM(gross_revenue) * 100.0 / (SELECT SUM(gross_revenue) FROM fact_sales_performance JOIN dim_geography ON fact_sales_performance.geo_key = dim_geography.geo_key)) AS revenue_percentage
 FROM 
-    fact_sales_performance
+    fact_sales_performance 
 JOIN 
-    dim_geography ON fact_sales_performance.geo_key = dim_geography.geo_key
+    dim_geography 
+ON 
+    fact_sales_performance.geo_key = dim_geography.geo_key
 GROUP BY 
-    region, gross_revenue;","SELECT g.region, SUM(f.gross_revenue) AS region_revenue, ROUND((SUM(f.gross_revenue) * 100.0 / SUM(SUM(f.gross_revenue)) OVER ()), 2) AS pct_of_total FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.region;"
-run_mode_5_1789109207,Mode 5 (ARMG - Negative Constraints),42,Q20,Category D — Semantic / Schema Trap Queries,What is the total revenue by region?,True,1,0,1,6577.127,,,325,0,0,1,,,,,"SELECT 
+    region;","SELECT g.region, SUM(f.gross_revenue) AS region_revenue, ROUND((SUM(f.gross_revenue) * 100.0 / SUM(SUM(f.gross_revenue)) OVER ()), 2) AS pct_of_total FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.region;"
+authoritative_seed42_mode_5,Mode 5 (ARMG - Negative Constraints),42,Q20,Category D — Semantic / Schema Trap Queries,What is the total revenue by region?,True,1,0,1,6594.378,,,325,0,0,1,,,,,"SELECT 
     d.region, 
     SUM(f.gross_revenue) AS total_revenue
 FROM 
@@ -1144,43 +882,41 @@ JOIN
     dim_geography d ON f.geo_key = d.geo_key
 GROUP BY 
     d.region;","SELECT g.region, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.region;"
-run_mode_5_1789109207,Mode 5 (ARMG - Negative Constraints),42,Q21,Category D — Semantic / Schema Trap Queries,Show total discount by product category.,True,1,0,1,6433.463,,,326,0,0,1,,,,,"SELECT 
+authoritative_seed42_mode_5,Mode 5 (ARMG - Negative Constraints),42,Q21,Category D — Semantic / Schema Trap Queries,Show total discount by product category.,True,1,0,1,6438.223,,,326,0,0,1,,,,,"SELECT 
     p.category,
-    SUM(f.discount_applied) AS total_discount
+    SUM(fs.discount_applied) AS total_discount
 FROM 
-    fact_sales_performance f
+    fact_sales_performance fs
 JOIN 
-    dim_product p ON f.product_key = p.product_key
+    dim_product p ON fs.product_key = p.product_key
 GROUP BY 
     p.category;","SELECT p.category, SUM(f.discount_applied) AS total_discount_applied FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
-run_mode_5_1789109207,Mode 5 (ARMG - Negative Constraints),42,Q22,Category D — Semantic / Schema Trap Queries,What is the total profit for each product category?,True,1,0,1,6661.56,,,330,0,0,1,,,,,"SELECT 
+authoritative_seed42_mode_5,Mode 5 (ARMG - Negative Constraints),42,Q22,Category D — Semantic / Schema Trap Queries,What is the total profit for each product category?,True,1,1,2,12727.074,,,813,0,0,1,ADMITTED,,,,"SELECT 
     category, 
     SUM(net_profit) AS total_profit
 FROM 
-    fact_sales_performance 
+    fact_sales_performance
 JOIN 
-    dim_product 
-ON 
-    fact_sales_performance.product_key = dim_product.product_key
+    dim_product ON fact_sales_performance.product_key = dim_product.product_key
 GROUP BY 
     category;","SELECT p.category, SUM(f.net_profit) AS total_net_profit FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
-run_mode_5_1789109207,Mode 5 (ARMG - Negative Constraints),42,Q23,Category D — Semantic / Schema Trap Queries,What is the average cost of products in each sub-category?,True,1,0,1,5829.46,,,313,0,0,1,,,,,"SELECT 
+authoritative_seed42_mode_5,Mode 5 (ARMG - Negative Constraints),42,Q23,Category D — Semantic / Schema Trap Queries,What is the average cost of products in each sub-category?,True,1,0,1,5782.645,,,313,0,0,1,,,,,"SELECT 
     sub_category, 
     AVG(unit_cost) AS average_cost
 FROM 
     dim_product
 GROUP BY 
     sub_category;","SELECT p.sub_category, AVG(p.unit_cost) AS avg_unit_cost FROM dim_product p GROUP BY p.sub_category;"
-run_mode_5_1789109207,Mode 5 (ARMG - Negative Constraints),42,Q24,Category D — Semantic / Schema Trap Queries,What is the total gross revenue by market?,True,1,0,1,6895.593,,,330,0,0,1,,,,,"SELECT 
-    m.market_type, 
+authoritative_seed42_mode_5,Mode 5 (ARMG - Negative Constraints),42,Q24,Category D — Semantic / Schema Trap Queries,What is the total gross revenue by market?,True,1,0,1,6654.011,,,330,0,0,1,,,,,"SELECT 
+    d.market_type, 
     SUM(f.gross_revenue) AS total_gross_revenue
 FROM 
     fact_sales_performance f
 JOIN 
-    dim_geography m ON f.geo_key = m.geo_key
+    dim_geography d ON f.geo_key = d.geo_key
 GROUP BY 
-    m.market_type;","SELECT g.market_type, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.market_type;"
-run_mode_5_1789109207,Mode 5 (ARMG - Negative Constraints),42,Q25,Category D — Semantic / Schema Trap Queries,What is the total profit and total revenue for each market type?,True,0,0,1,8119.372,,,364,0,0,1,,,,,"SELECT 
+    d.market_type;","SELECT g.market_type, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.market_type;"
+authoritative_seed42_mode_5,Mode 5 (ARMG - Negative Constraints),42,Q25,Category D — Semantic / Schema Trap Queries,What is the total profit and total revenue for each market type?,True,0,0,1,7823.925,,,364,0,0,1,,,,,"SELECT 
     mt.market_type,
     SUM(sp.net_profit) AS total_profit,
     SUM(sp.gross_revenue) AS total_revenue
@@ -1192,9 +928,9 @@ JOIN
     (SELECT DISTINCT market_type FROM dim_geography) mt ON dg.market_type = mt.market_type
 GROUP BY 
     mt.market_type;","SELECT g.market_type, SUM(f.gross_revenue) AS total_gross_revenue, SUM(f.net_profit) AS total_net_profit FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.market_type;"
-run_mode_6_1789109432,Mode 6 (ARMG - Temporal Decay),42,Q01,Category A — Simple Aggregations & Groupings,What is the total gross revenue across all transactions?,True,1,0,1,3363.028,,,378,0,0,0,,,,,"SELECT SUM(gross_revenue) AS total_gross_revenue
+authoritative_seed42_mode_6,Mode 6 (ARMG - Temporal Decay),42,Q01,Category A — Simple Aggregations & Groupings,What is the total gross revenue across all transactions?,True,1,0,1,3335.895,,,378,0,0,0,,,,,"SELECT SUM(gross_revenue) AS total_gross_revenue
 FROM fact_sales_performance;",SELECT SUM(gross_revenue) AS total_gross_revenue FROM fact_sales_performance;
-run_mode_6_1789109432,Mode 6 (ARMG - Temporal Decay),42,Q02,Category A — Simple Aggregations & Groupings,What is the total units sold by product category?,True,1,0,1,4391.501,,,330,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_6,Mode 6 (ARMG - Temporal Decay),42,Q02,Category A — Simple Aggregations & Groupings,What is the total units sold by product category?,True,1,0,1,4305.736,,,330,0,0,0,,,,,"SELECT 
     category,
     SUM(units_sold) AS total_units_sold
 FROM 
@@ -1205,18 +941,18 @@ ON
     fact_sales_performance.product_key = dim_product.product_key
 GROUP BY 
     category;","SELECT p.category, SUM(f.units_sold) AS total_units FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
-run_mode_6_1789109432,Mode 6 (ARMG - Temporal Decay),42,Q03,Category A — Simple Aggregations & Groupings,What is the average discount applied across all transactions?,True,1,0,1,3093.226,,,375,0,0,0,,,,,"SELECT AVG(discount_applied) AS average_discount
+authoritative_seed42_mode_6,Mode 6 (ARMG - Temporal Decay),42,Q03,Category A — Simple Aggregations & Groupings,What is the average discount applied across all transactions?,True,1,0,1,3053.765,,,375,0,0,0,,,,,"SELECT AVG(discount_applied) AS average_discount
 FROM fact_sales_performance;",SELECT AVG(discount_applied) AS avg_discount FROM fact_sales_performance;
-run_mode_6_1789109432,Mode 6 (ARMG - Temporal Decay),42,Q04,Category A — Simple Aggregations & Groupings,How many transactions were recorded per market type?,True,1,1,2,11120.814,,,818,0,0,0,ADMITTED,,,,"SELECT 
+authoritative_seed42_mode_6,Mode 6 (ARMG - Temporal Decay),42,Q04,Category A — Simple Aggregations & Groupings,How many transactions were recorded per market type?,True,1,1,2,10916.625,,,821,0,0,0,ADMITTED,,,,"SELECT 
     dg.market_type, 
-    COUNT(fp.fact_key) AS transactions
+    COUNT(fp.fact_key) AS transactions_count
 FROM 
     fact_sales_performance fp
 JOIN 
     dim_geography dg ON fp.geo_key = dg.geo_key
 GROUP BY 
     dg.market_type;","SELECT g.market_type, COUNT(*) AS transaction_count FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.market_type;"
-run_mode_6_1789109432,Mode 6 (ARMG - Temporal Decay),42,Q05,Category A — Simple Aggregations & Groupings,What is the total net profit by calendar quarter in 2025?,True,0,0,1,7402.077,,,360,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_6,Mode 6 (ARMG - Temporal Decay),42,Q05,Category A — Simple Aggregations & Groupings,What is the total net profit by calendar quarter in 2025?,True,0,0,1,7238.584,,,360,0,0,0,,,,,"SELECT 
     t.calendar_quarter, 
     SUM(fp.net_profit) AS total_net_profit
 FROM 
@@ -1227,7 +963,7 @@ WHERE
     t.calendar_year = 2025
 GROUP BY 
     t.calendar_quarter;","SELECT t.calendar_quarter, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY t.calendar_quarter ORDER BY t.calendar_quarter;"
-run_mode_6_1789109432,Mode 6 (ARMG - Temporal Decay),42,Q06,Category B — Multi-Table Analytical Joins,What is the total gross revenue by geographic region?,True,1,0,1,6725.06,,,329,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_6,Mode 6 (ARMG - Temporal Decay),42,Q06,Category B — Multi-Table Analytical Joins,What is the total gross revenue by geographic region?,True,1,0,1,6513.827,,,329,0,0,0,,,,,"SELECT 
     d.region, 
     SUM(f.gross_revenue) AS total_gross_revenue
 FROM 
@@ -1236,7 +972,7 @@ JOIN
     dim_geography d ON f.geo_key = d.geo_key
 GROUP BY 
     d.region;","SELECT g.region, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.region;"
-run_mode_6_1789109432,Mode 6 (ARMG - Temporal Decay),42,Q07,Category B — Multi-Table Analytical Joins,What is the total net profit by product category and market type?,True,1,0,1,7630.131,,,393,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_6,Mode 6 (ARMG - Temporal Decay),42,Q07,Category B — Multi-Table Analytical Joins,What is the total net profit by product category and market type?,True,1,0,1,7527.361,,,393,0,0,0,,,,,"SELECT 
     dp.category, 
     dg.market_type, 
     SUM(fs.net_profit) AS total_net_profit
@@ -1249,21 +985,21 @@ JOIN
 GROUP BY 
     dp.category, 
     dg.market_type;","SELECT p.category, g.market_type, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY p.category, g.market_type;"
-run_mode_6_1789109432,Mode 6 (ARMG - Temporal Decay),42,Q08,Category B — Multi-Table Analytical Joins,What is the total units sold by region and calendar month in 2025?,True,1,0,1,8072.406,,,414,0,0,1,,,,,"SELECT 
+authoritative_seed42_mode_6,Mode 6 (ARMG - Temporal Decay),42,Q08,Category B — Multi-Table Analytical Joins,What is the total units sold by region and calendar month in 2025?,True,1,0,1,7889.119,,,414,0,0,1,,,,,"SELECT 
     d.region,
     dt.calendar_month,
-    SUM(fs.units_sold) AS total_units_sold
+    SUM(f.units_sold) AS total_units_sold
 FROM 
-    fact_sales_performance fs
+    fact_sales_performance f
 JOIN 
-    dim_geography d ON fs.geo_key = d.geo_key
+    dim_geography d ON f.geo_key = d.geo_key
 JOIN 
-    dim_time dt ON fs.time_key = dt.time_key
+    dim_time dt ON f.time_key = dt.time_key
 WHERE 
     dt.calendar_year = 2025
 GROUP BY 
     d.region, dt.calendar_month;","SELECT g.region, t.calendar_month, SUM(f.units_sold) AS total_units FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY g.region, t.calendar_month;"
-run_mode_6_1789109432,Mode 6 (ARMG - Temporal Decay),42,Q09,Category B — Multi-Table Analytical Joins,What is the total gross revenue and net profit for Hardware category by region?,True,1,0,1,8016.092,,,406,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_6,Mode 6 (ARMG - Temporal Decay),42,Q09,Category B — Multi-Table Analytical Joins,What is the total gross revenue and net profit for Hardware category by region?,True,1,0,1,7871.842,,,406,0,0,0,,,,,"SELECT 
     d.region,
     SUM(fp.gross_revenue) AS total_gross_revenue,
     SUM(fp.net_profit) AS total_net_profit
@@ -1277,7 +1013,7 @@ WHERE
     p.category = 'Hardware'
 GROUP BY 
     d.region;","SELECT g.region, SUM(f.gross_revenue) AS total_revenue, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key JOIN dim_product p ON f.product_key = p.product_key WHERE p.category = 'Hardware' GROUP BY g.region;"
-run_mode_6_1789109432,Mode 6 (ARMG - Temporal Decay),42,Q10,Category B — Multi-Table Analytical Joins,What is the average discount applied per product sub-category in the Enterprise market?,True,1,0,1,7748.429,,,400,0,0,1,,,,,"SELECT 
+authoritative_seed42_mode_6,Mode 6 (ARMG - Temporal Decay),42,Q10,Category B — Multi-Table Analytical Joins,What is the average discount applied per product sub-category in the Enterprise market?,True,1,0,1,7755.237,,,400,0,0,1,,,,,"SELECT 
     dp.sub_category,
     AVG(fsp.discount_applied) AS avg_discount_applied
 FROM 
@@ -1290,7 +1026,7 @@ WHERE
     dg.market_type = 'Enterprise'
 GROUP BY 
     dp.sub_category;","SELECT p.sub_category, AVG(f.discount_applied) AS avg_discount FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.market_type = 'Enterprise' GROUP BY p.sub_category;"
-run_mode_6_1789109432,Mode 6 (ARMG - Temporal Decay),42,Q11,Category B — Multi-Table Analytical Joins,What is the total net profit by day of the week for the Commercial market type?,False,0,3,4,25852.632,,,2553,0,1,0,TERMINAL_FAILURE_NOT_ADMITTED,,Semantic,"column g.full_date does not exist
+authoritative_seed42_mode_6,Mode 6 (ARMG - Temporal Decay),42,Q11,Category B — Multi-Table Analytical Joins,What is the total net profit by day of the week for the Commercial market type?,False,0,3,4,25118.727,,,2553,0,1,0,TERMINAL_FAILURE_NOT_ADMITTED,,Semantic,"column g.full_date does not exist
 LINE 7:     dim_geography g ON t.full_date = g.full_date
                                              ^
 HINT:  Perhaps you meant to reference the column ""t.full_date"".","SELECT 
@@ -1306,7 +1042,7 @@ WHERE
     g.market_type = 'Commercial'
 GROUP BY 
     t.day_of_week;","SELECT t.day_of_week, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.market_type = 'Commercial' GROUP BY t.day_of_week;"
-run_mode_6_1789109432,Mode 6 (ARMG - Temporal Decay),42,Q12,Category B — Multi-Table Analytical Joins,What is the total units sold by product name in the EMEA region?,True,1,0,1,7559.709,,,395,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_6,Mode 6 (ARMG - Temporal Decay),42,Q12,Category B — Multi-Table Analytical Joins,What is the total units sold by product name in the EMEA region?,True,1,0,1,7495.616,,,395,0,0,0,,,,,"SELECT 
     dp.product_name, 
     SUM(fs.units_sold) AS total_units_sold
 FROM 
@@ -1319,12 +1055,12 @@ WHERE
     dg.region = 'EMEA'
 GROUP BY 
     dp.product_name;","SELECT p.product_name, SUM(f.units_sold) AS total_units FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.region = 'EMEA' GROUP BY p.product_name;"
-run_mode_6_1789109432,Mode 6 (ARMG - Temporal Decay),42,Q13,Category B — Multi-Table Analytical Joins,What is the total gross revenue by zone in North America?,True,1,1,2,13336.696,,,840,0,0,0,ADMITTED,,,,"SELECT g.zone, SUM(f.gross_revenue) AS total_gross_revenue
+authoritative_seed42_mode_6,Mode 6 (ARMG - Temporal Decay),42,Q13,Category B — Multi-Table Analytical Joins,What is the total gross revenue by zone in North America?,True,1,1,2,13163.044,,,840,0,0,0,ADMITTED,,,,"SELECT g.zone, SUM(f.gross_revenue) AS total_gross_revenue
 FROM fact_sales_performance f
 JOIN dim_geography g ON f.geo_key = g.geo_key
 WHERE g.region = 'North America'
 GROUP BY g.zone;","SELECT g.zone, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.region = 'North America' GROUP BY g.zone;"
-run_mode_6_1789109432,Mode 6 (ARMG - Temporal Decay),42,Q14,Category C — Advanced Analytical Queries,Rank product categories by total gross revenue.,True,0,0,1,7046.937,,,340,0,0,0,,,,,"SELECT 
+authoritative_seed42_mode_6,Mode 6 (ARMG - Temporal Decay),42,Q14,Category C — Advanced Analytical Queries,Rank product categories by total gross revenue.,True,0,0,1,7034.196,,,340,0,0,0,,,,,"SELECT 
     category, 
     SUM(gross_revenue) AS total_gross_revenue
 FROM 
@@ -1335,20 +1071,20 @@ GROUP BY
     category
 ORDER BY 
     total_gross_revenue DESC;","SELECT p.category, SUM(f.gross_revenue) AS total_revenue, RANK() OVER (ORDER BY SUM(f.gross_revenue) DESC) AS revenue_rank FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
-run_mode_6_1789109432,Mode 6 (ARMG - Temporal Decay),42,Q15,Category C — Advanced Analytical Queries,Calculate the running total of gross revenue across calendar months of 2025.,True,0,1,2,15336.452,,,969,0,0,0,ADMITTED,,,,"SELECT 
+authoritative_seed42_mode_6,Mode 6 (ARMG - Temporal Decay),42,Q15,Category C — Advanced Analytical Queries,Calculate the running total of gross revenue across calendar months of 2025.,True,0,1,2,15047.875,,,961,0,0,0,ADMITTED,,,,"SELECT 
     calendar_month,
     SUM(gross_revenue) AS running_total_gross_revenue
 FROM 
-    fact_sales_performance 
+    fact_sales_performance fp
 JOIN 
-    dim_time ON fact_sales_performance.time_key = dim_time.time_key
+    dim_time dt ON fp.time_key = dt.time_key
 WHERE 
-    dim_time.calendar_year = 2025
+    dt.calendar_year = 2025
 GROUP BY 
     calendar_month
 ORDER BY 
     calendar_month;","SELECT t.calendar_month, SUM(f.gross_revenue) AS monthly_revenue, SUM(SUM(f.gross_revenue)) OVER (ORDER BY t.calendar_month) AS running_total FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY t.calendar_month ORDER BY t.calendar_month;"
-run_mode_6_1789109432,Mode 6 (ARMG - Temporal Decay),42,Q16,Category C — Advanced Analytical Queries,What are the top 3 products by total net profit?,True,1,0,1,7163.116,,,347,0,0,1,,,,,"SELECT 
+authoritative_seed42_mode_6,Mode 6 (ARMG - Temporal Decay),42,Q16,Category C — Advanced Analytical Queries,What are the top 3 products by total net profit?,True,1,0,1,7065.983,,,347,0,0,1,,,,,"SELECT 
     p.product_name, 
     SUM(fp.net_profit) AS total_net_profit
 FROM 
@@ -1360,7 +1096,7 @@ GROUP BY
 ORDER BY 
     total_net_profit DESC
 LIMIT 3;","SELECT p.product_name, SUM(f.net_profit) AS total_net_profit FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.product_name ORDER BY total_net_profit DESC LIMIT 3;"
-run_mode_6_1789109432,Mode 6 (ARMG - Temporal Decay),42,Q17,Category C — Advanced Analytical Queries,Show monthly gross revenue along with previous month gross revenue in 2025 using LAG.,True,0,1,2,15683.594,,,1209,0,0,3,EXISTING_REINFORCED,mem-6c9d203a,,,"SELECT 
+authoritative_seed42_mode_6,Mode 6 (ARMG - Temporal Decay),42,Q17,Category C — Advanced Analytical Queries,Show monthly gross revenue along with previous month gross revenue in 2025 using LAG.,True,0,1,2,15375.7,,,1206,0,0,3,EXISTING_REINFORCED,mem-b0caeecb,,,"SELECT 
     dt.calendar_month,
     fsp.gross_revenue,
     LAG(fsp.gross_revenue) OVER (ORDER BY dt.calendar_month) AS prev_month_gross_revenue
@@ -1374,7 +1110,7 @@ GROUP BY
     dt.calendar_month, fsp.gross_revenue
 ORDER BY 
     dt.calendar_month;","SELECT t.calendar_month, SUM(f.gross_revenue) AS current_month_revenue, LAG(SUM(f.gross_revenue)) OVER (ORDER BY t.calendar_month) AS prev_month_revenue FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY t.calendar_month ORDER BY t.calendar_month;"
-run_mode_6_1789109432,Mode 6 (ARMG - Temporal Decay),42,Q18,Category C — Advanced Analytical Queries,"For each product category, rank products by total units sold.",True,0,0,1,7043.265,,,346,0,0,3,,,,,"SELECT 
+authoritative_seed42_mode_6,Mode 6 (ARMG - Temporal Decay),42,Q18,Category C — Advanced Analytical Queries,"For each product category, rank products by total units sold.",True,0,0,1,6967.354,,,346,0,0,3,,,,,"SELECT 
     category,
     product_name,
     SUM(units_sold) AS total_units_sold
@@ -1386,18 +1122,18 @@ GROUP BY
     category, product_name
 ORDER BY 
     category, total_units_sold DESC;","SELECT p.category, p.product_name, SUM(f.units_sold) AS total_units, RANK() OVER (PARTITION BY p.category ORDER BY SUM(f.units_sold) DESC) AS rank_in_category FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category, p.product_name;"
-run_mode_6_1789109432,Mode 6 (ARMG - Temporal Decay),42,Q19,Category C — Advanced Analytical Queries,What is the percentage contribution of each region to total gross revenue?,False,0,3,4,23443.46,,,2204,0,1,1,TERMINAL_FAILURE_NOT_ADMITTED,,Planning,"column ""fact_sales_performance.gross_revenue"" must appear in the GROUP BY clause or be used in an aggregate function
-LINE 3:     (SUM(gross_revenue) * 100.0 / SUM(gross_revenue) OVER ()...
-                                              ^","SELECT 
+authoritative_seed42_mode_6,Mode 6 (ARMG - Temporal Decay),42,Q19,Category C — Advanced Analytical Queries,What is the percentage contribution of each region to total gross revenue?,True,0,0,1,7969.863,,,368,0,0,1,,,,,"SELECT 
     region,
-    (SUM(gross_revenue) * 100.0 / SUM(gross_revenue) OVER ()) AS revenue_percentage
+    (SUM(gross_revenue) * 100.0 / (SELECT SUM(gross_revenue) FROM fact_sales_performance JOIN dim_geography ON fact_sales_performance.geo_key = dim_geography.geo_key)) AS revenue_percentage
 FROM 
     fact_sales_performance 
 JOIN 
-    dim_geography ON fact_sales_performance.geo_key = dim_geography.geo_key
+    dim_geography 
+ON 
+    fact_sales_performance.geo_key = dim_geography.geo_key
 GROUP BY 
-    region","SELECT g.region, SUM(f.gross_revenue) AS region_revenue, ROUND((SUM(f.gross_revenue) * 100.0 / SUM(SUM(f.gross_revenue)) OVER ()), 2) AS pct_of_total FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.region;"
-run_mode_6_1789109432,Mode 6 (ARMG - Temporal Decay),42,Q20,Category D — Semantic / Schema Trap Queries,What is the total revenue by region?,True,1,0,1,6637.237,,,325,0,0,1,,,,,"SELECT 
+    region;","SELECT g.region, SUM(f.gross_revenue) AS region_revenue, ROUND((SUM(f.gross_revenue) * 100.0 / SUM(SUM(f.gross_revenue)) OVER ()), 2) AS pct_of_total FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.region;"
+authoritative_seed42_mode_6,Mode 6 (ARMG - Temporal Decay),42,Q20,Category D — Semantic / Schema Trap Queries,What is the total revenue by region?,True,1,0,1,6595.227,,,325,0,0,1,,,,,"SELECT 
     d.region, 
     SUM(f.gross_revenue) AS total_revenue
 FROM 
@@ -1406,7 +1142,7 @@ JOIN
     dim_geography d ON f.geo_key = d.geo_key
 GROUP BY 
     d.region;","SELECT g.region, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.region;"
-run_mode_6_1789109432,Mode 6 (ARMG - Temporal Decay),42,Q21,Category D — Semantic / Schema Trap Queries,Show total discount by product category.,True,1,0,1,6503.363,,,326,0,0,1,,,,,"SELECT 
+authoritative_seed42_mode_6,Mode 6 (ARMG - Temporal Decay),42,Q21,Category D — Semantic / Schema Trap Queries,Show total discount by product category.,True,1,0,1,6443.249,,,326,0,0,1,,,,,"SELECT 
     p.category,
     SUM(f.discount_applied) AS total_discount
 FROM 
@@ -1415,7 +1151,7 @@ JOIN
     dim_product p ON f.product_key = p.product_key
 GROUP BY 
     p.category;","SELECT p.category, SUM(f.discount_applied) AS total_discount_applied FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
-run_mode_6_1789109432,Mode 6 (ARMG - Temporal Decay),42,Q22,Category D — Semantic / Schema Trap Queries,What is the total profit for each product category?,True,1,0,1,6433.728,,,330,0,0,1,,,,,"SELECT 
+authoritative_seed42_mode_6,Mode 6 (ARMG - Temporal Decay),42,Q22,Category D — Semantic / Schema Trap Queries,What is the total profit for each product category?,True,1,0,1,6377.828,,,330,0,0,1,,,,,"SELECT 
     category, 
     SUM(net_profit) AS total_profit
 FROM 
@@ -1426,14 +1162,276 @@ ON
     fact_sales_performance.product_key = dim_product.product_key
 GROUP BY 
     category;","SELECT p.category, SUM(f.net_profit) AS total_net_profit FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
-run_mode_6_1789109432,Mode 6 (ARMG - Temporal Decay),42,Q23,Category D — Semantic / Schema Trap Queries,What is the average cost of products in each sub-category?,True,1,0,1,5836.954,,,313,0,0,1,,,,,"SELECT 
+authoritative_seed42_mode_6,Mode 6 (ARMG - Temporal Decay),42,Q23,Category D — Semantic / Schema Trap Queries,What is the average cost of products in each sub-category?,True,1,0,1,5707.213,,,313,0,0,1,,,,,"SELECT 
     sub_category, 
     AVG(unit_cost) AS average_cost
 FROM 
     dim_product
 GROUP BY 
     sub_category;","SELECT p.sub_category, AVG(p.unit_cost) AS avg_unit_cost FROM dim_product p GROUP BY p.sub_category;"
-run_mode_6_1789109432,Mode 6 (ARMG - Temporal Decay),42,Q24,Category D — Semantic / Schema Trap Queries,What is the total gross revenue by market?,True,1,0,1,6896.407,,,330,0,0,1,,,,,"SELECT 
+authoritative_seed42_mode_6,Mode 6 (ARMG - Temporal Decay),42,Q24,Category D — Semantic / Schema Trap Queries,What is the total gross revenue by market?,True,1,0,1,6665.203,,,330,0,0,1,,,,,"SELECT 
+    d.market_type, 
+    SUM(f.gross_revenue) AS total_gross_revenue
+FROM 
+    fact_sales_performance f
+JOIN 
+    dim_geography d ON f.geo_key = d.geo_key
+GROUP BY 
+    d.market_type;","SELECT g.market_type, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.market_type;"
+authoritative_seed42_mode_6,Mode 6 (ARMG - Temporal Decay),42,Q25,Category D — Semantic / Schema Trap Queries,What is the total profit and total revenue for each market type?,True,0,0,1,7899.594,,,364,0,0,1,,,,,"SELECT 
+    mt.market_type,
+    SUM(sp.net_profit) AS total_profit,
+    SUM(sp.gross_revenue) AS total_revenue
+FROM 
+    fact_sales_performance sp
+JOIN 
+    dim_geography dg ON sp.geo_key = dg.geo_key
+JOIN 
+    (SELECT DISTINCT market_type FROM dim_geography) mt ON dg.market_type = mt.market_type
+GROUP BY 
+    mt.market_type;","SELECT g.market_type, SUM(f.gross_revenue) AS total_gross_revenue, SUM(f.net_profit) AS total_net_profit FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.market_type;"
+authoritative_seed42_mode_4,Mode 4 (Full ARMG),42,Q01,Category A — Simple Aggregations & Groupings,What is the total gross revenue across all transactions?,True,1,0,1,3569.535,,,378,0,0,0,,,,,"SELECT SUM(gross_revenue) AS total_gross_revenue
+FROM fact_sales_performance;",SELECT SUM(gross_revenue) AS total_gross_revenue FROM fact_sales_performance;
+authoritative_seed42_mode_4,Mode 4 (Full ARMG),42,Q02,Category A — Simple Aggregations & Groupings,What is the total units sold by product category?,True,1,0,1,4398.255,,,330,0,0,0,,,,,"SELECT 
+    category,
+    SUM(units_sold) AS total_units_sold
+FROM 
+    fact_sales_performance 
+JOIN 
+    dim_product 
+ON 
+    fact_sales_performance.product_key = dim_product.product_key
+GROUP BY 
+    category;","SELECT p.category, SUM(f.units_sold) AS total_units FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
+authoritative_seed42_mode_4,Mode 4 (Full ARMG),42,Q03,Category A — Simple Aggregations & Groupings,What is the average discount applied across all transactions?,True,1,0,1,3090.904,,,375,0,0,0,,,,,"SELECT AVG(discount_applied) AS average_discount
+FROM fact_sales_performance;",SELECT AVG(discount_applied) AS avg_discount FROM fact_sales_performance;
+authoritative_seed42_mode_4,Mode 4 (Full ARMG),42,Q04,Category A — Simple Aggregations & Groupings,How many transactions were recorded per market type?,True,1,1,2,10920.941,,,821,0,0,0,ADMITTED,,,,"SELECT 
+    dg.market_type, 
+    COUNT(fp.fact_key) AS transactions_count
+FROM 
+    fact_sales_performance fp
+JOIN 
+    dim_geography dg ON fp.geo_key = dg.geo_key
+GROUP BY 
+    dg.market_type;","SELECT g.market_type, COUNT(*) AS transaction_count FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.market_type;"
+authoritative_seed42_mode_4,Mode 4 (Full ARMG),42,Q05,Category A — Simple Aggregations & Groupings,What is the total net profit by calendar quarter in 2025?,True,0,0,1,7248.23,,,360,0,0,0,,,,,"SELECT 
+    t.calendar_quarter, 
+    SUM(fp.net_profit) AS total_net_profit
+FROM 
+    dim_time t
+JOIN 
+    fact_sales_performance fp ON t.time_key = fp.time_key
+WHERE 
+    t.calendar_year = 2025
+GROUP BY 
+    t.calendar_quarter;","SELECT t.calendar_quarter, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY t.calendar_quarter ORDER BY t.calendar_quarter;"
+authoritative_seed42_mode_4,Mode 4 (Full ARMG),42,Q06,Category B — Multi-Table Analytical Joins,What is the total gross revenue by geographic region?,True,1,0,1,6709.229,,,329,0,0,0,,,,,"SELECT 
+    d.region, 
+    SUM(f.gross_revenue) AS total_gross_revenue
+FROM 
+    fact_sales_performance f
+JOIN 
+    dim_geography d ON f.geo_key = d.geo_key
+GROUP BY 
+    d.region;","SELECT g.region, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.region;"
+authoritative_seed42_mode_4,Mode 4 (Full ARMG),42,Q07,Category B — Multi-Table Analytical Joins,What is the total net profit by product category and market type?,True,1,0,1,7657.981,,,393,0,0,0,,,,,"SELECT 
+    dp.category, 
+    dg.market_type, 
+    SUM(fs.net_profit) AS total_net_profit
+FROM 
+    fact_sales_performance fs
+JOIN 
+    dim_geography dg ON fs.geo_key = dg.geo_key
+JOIN 
+    dim_product dp ON fs.product_key = dp.product_key
+GROUP BY 
+    dp.category, 
+    dg.market_type;","SELECT p.category, g.market_type, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY p.category, g.market_type;"
+authoritative_seed42_mode_4,Mode 4 (Full ARMG),42,Q08,Category B — Multi-Table Analytical Joins,What is the total units sold by region and calendar month in 2025?,True,1,1,2,14302.535,,,1091,0,0,1,EXISTING_REINFORCED,mem-f5e66b70,,,"SELECT 
+    dg.region,
+    dt.calendar_month,
+    SUM(fs.units_sold) AS total_units_sold
+FROM 
+    fact_sales_performance fs
+JOIN 
+    dim_time dt ON fs.time_key = dt.time_key
+JOIN 
+    dim_geography dg ON fs.geo_key = dg.geo_key
+WHERE 
+    dt.calendar_year = 2025
+GROUP BY 
+    dg.region, dt.calendar_month;","SELECT g.region, t.calendar_month, SUM(f.units_sold) AS total_units FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY g.region, t.calendar_month;"
+authoritative_seed42_mode_4,Mode 4 (Full ARMG),42,Q09,Category B — Multi-Table Analytical Joins,What is the total gross revenue and net profit for Hardware category by region?,True,1,0,1,7997.686,,,406,0,0,0,,,,,"SELECT 
+    d.region,
+    SUM(fp.gross_revenue) AS total_gross_revenue,
+    SUM(fp.net_profit) AS total_net_profit
+FROM 
+    fact_sales_performance fp
+JOIN 
+    dim_geography d ON fp.geo_key = d.geo_key
+JOIN 
+    dim_product p ON fp.product_key = p.product_key
+WHERE 
+    p.category = 'Hardware'
+GROUP BY 
+    d.region;","SELECT g.region, SUM(f.gross_revenue) AS total_revenue, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key JOIN dim_product p ON f.product_key = p.product_key WHERE p.category = 'Hardware' GROUP BY g.region;"
+authoritative_seed42_mode_4,Mode 4 (Full ARMG),42,Q10,Category B — Multi-Table Analytical Joins,What is the average discount applied per product sub-category in the Enterprise market?,True,1,0,1,7778.095,,,400,0,0,1,,,,,"SELECT 
+    dp.sub_category,
+    AVG(fsp.discount_applied) AS avg_discount_applied
+FROM 
+    fact_sales_performance fsp
+JOIN 
+    dim_geography dg ON fsp.geo_key = dg.geo_key
+JOIN 
+    dim_product dp ON fsp.product_key = dp.product_key
+WHERE 
+    dg.market_type = 'Enterprise'
+GROUP BY 
+    dp.sub_category;","SELECT p.sub_category, AVG(f.discount_applied) AS avg_discount FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.market_type = 'Enterprise' GROUP BY p.sub_category;"
+authoritative_seed42_mode_4,Mode 4 (Full ARMG),42,Q11,Category B — Multi-Table Analytical Joins,What is the total net profit by day of the week for the Commercial market type?,False,0,3,4,25652.986,,,2553,0,1,0,TERMINAL_FAILURE_NOT_ADMITTED,,Semantic,"column g.full_date does not exist
+LINE 7:     dim_geography g ON t.full_date = g.full_date
+                                             ^
+HINT:  Perhaps you meant to reference the column ""t.full_date"".","SELECT 
+    t.day_of_week, 
+    SUM(fp.net_profit) AS total_net_profit
+FROM 
+    dim_time t
+JOIN 
+    dim_geography g ON t.full_date = g.full_date
+JOIN 
+    fact_sales_performance fp ON t.full_date = fp.time_key AND g.geo_key = fp.geo_key
+WHERE 
+    g.market_type = 'Commercial'
+GROUP BY 
+    t.day_of_week;","SELECT t.day_of_week, SUM(f.net_profit) AS total_profit FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.market_type = 'Commercial' GROUP BY t.day_of_week;"
+authoritative_seed42_mode_4,Mode 4 (Full ARMG),42,Q12,Category B — Multi-Table Analytical Joins,What is the total units sold by product name in the EMEA region?,True,1,0,1,7569.811,,,395,0,0,0,,,,,"SELECT 
+    dp.product_name, 
+    SUM(fs.units_sold) AS total_units_sold
+FROM 
+    fact_sales_performance fs
+JOIN 
+    dim_geography dg ON fs.geo_key = dg.geo_key
+JOIN 
+    dim_product dp ON fs.product_key = dp.product_key
+WHERE 
+    dg.region = 'EMEA'
+GROUP BY 
+    dp.product_name;","SELECT p.product_name, SUM(f.units_sold) AS total_units FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.region = 'EMEA' GROUP BY p.product_name;"
+authoritative_seed42_mode_4,Mode 4 (Full ARMG),42,Q13,Category B — Multi-Table Analytical Joins,What is the total gross revenue by zone in North America?,True,1,1,2,13282.371,,,840,0,0,0,ADMITTED,,,,"SELECT g.zone, SUM(f.gross_revenue) AS total_gross_revenue
+FROM fact_sales_performance f
+JOIN dim_geography g ON f.geo_key = g.geo_key
+WHERE g.region = 'North America'
+GROUP BY g.zone;","SELECT g.zone, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key WHERE g.region = 'North America' GROUP BY g.zone;"
+authoritative_seed42_mode_4,Mode 4 (Full ARMG),42,Q14,Category C — Advanced Analytical Queries,Rank product categories by total gross revenue.,True,0,0,1,6891.364,,,340,0,0,0,,,,,"SELECT 
+    category, 
+    SUM(gross_revenue) AS total_gross_revenue
+FROM 
+    dim_product p
+JOIN 
+    fact_sales_performance f ON p.product_key = f.product_key
+GROUP BY 
+    category
+ORDER BY 
+    total_gross_revenue DESC;","SELECT p.category, SUM(f.gross_revenue) AS total_revenue, RANK() OVER (ORDER BY SUM(f.gross_revenue) DESC) AS revenue_rank FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
+authoritative_seed42_mode_4,Mode 4 (Full ARMG),42,Q15,Category C — Advanced Analytical Queries,Calculate the running total of gross revenue across calendar months of 2025.,True,0,1,2,15939.253,,,980,0,0,0,ADMITTED,,,,"SELECT 
+    calendar_month,
+    SUM(gross_revenue) OVER (ORDER BY calendar_month) AS running_total_gross_revenue
+FROM 
+    fact_sales_performance 
+JOIN 
+    dim_time ON fact_sales_performance.time_key = dim_time.time_key
+WHERE 
+    dim_time.calendar_year = 2025
+GROUP BY 
+    calendar_month, gross_revenue
+ORDER BY 
+    calendar_month;","SELECT t.calendar_month, SUM(f.gross_revenue) AS monthly_revenue, SUM(SUM(f.gross_revenue)) OVER (ORDER BY t.calendar_month) AS running_total FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY t.calendar_month ORDER BY t.calendar_month;"
+authoritative_seed42_mode_4,Mode 4 (Full ARMG),42,Q16,Category C — Advanced Analytical Queries,What are the top 3 products by total net profit?,True,1,0,1,7126.133,,,347,0,0,1,,,,,"SELECT 
+    p.product_name, 
+    SUM(fp.net_profit) AS total_net_profit
+FROM 
+    dim_product p
+JOIN 
+    fact_sales_performance fp ON p.product_key = fp.product_key
+GROUP BY 
+    p.product_name
+ORDER BY 
+    total_net_profit DESC
+LIMIT 3;","SELECT p.product_name, SUM(f.net_profit) AS total_net_profit FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.product_name ORDER BY total_net_profit DESC LIMIT 3;"
+authoritative_seed42_mode_4,Mode 4 (Full ARMG),42,Q17,Category C — Advanced Analytical Queries,Show monthly gross revenue along with previous month gross revenue in 2025 using LAG.,True,0,1,2,15217.03,,,1209,0,0,3,EXISTING_REINFORCED,mem-4ff9e3d8,,,"SELECT 
+    dt.calendar_month,
+    fsp.gross_revenue,
+    LAG(fsp.gross_revenue) OVER (ORDER BY dt.calendar_month) AS prev_month_gross_revenue
+FROM 
+    fact_sales_performance fsp
+JOIN 
+    dim_time dt ON fsp.time_key = dt.time_key
+WHERE 
+    dt.calendar_year = 2025
+GROUP BY 
+    dt.calendar_month, fsp.gross_revenue
+ORDER BY 
+    dt.calendar_month;","SELECT t.calendar_month, SUM(f.gross_revenue) AS current_month_revenue, LAG(SUM(f.gross_revenue)) OVER (ORDER BY t.calendar_month) AS prev_month_revenue FROM fact_sales_performance f JOIN dim_time t ON f.time_key = t.time_key WHERE t.calendar_year = 2025 GROUP BY t.calendar_month ORDER BY t.calendar_month;"
+authoritative_seed42_mode_4,Mode 4 (Full ARMG),42,Q18,Category C — Advanced Analytical Queries,"For each product category, rank products by total units sold.",True,0,0,1,6941.746,,,346,0,0,3,,,,,"SELECT 
+    category,
+    product_name,
+    SUM(units_sold) AS total_units_sold
+FROM 
+    dim_product p
+JOIN 
+    fact_sales_performance f ON p.product_key = f.product_key
+GROUP BY 
+    category, product_name
+ORDER BY 
+    category, total_units_sold DESC;","SELECT p.category, p.product_name, SUM(f.units_sold) AS total_units, RANK() OVER (PARTITION BY p.category ORDER BY SUM(f.units_sold) DESC) AS rank_in_category FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category, p.product_name;"
+authoritative_seed42_mode_4,Mode 4 (Full ARMG),42,Q19,Category C — Advanced Analytical Queries,What is the percentage contribution of each region to total gross revenue?,True,0,0,1,8017.663,,,368,0,0,1,,,,,"SELECT 
+    region,
+    (SUM(gross_revenue) * 100.0 / (SELECT SUM(gross_revenue) FROM fact_sales_performance JOIN dim_geography ON fact_sales_performance.geo_key = dim_geography.geo_key)) AS revenue_percentage
+FROM 
+    fact_sales_performance 
+JOIN 
+    dim_geography 
+ON 
+    fact_sales_performance.geo_key = dim_geography.geo_key
+GROUP BY 
+    region;","SELECT g.region, SUM(f.gross_revenue) AS region_revenue, ROUND((SUM(f.gross_revenue) * 100.0 / SUM(SUM(f.gross_revenue)) OVER ()), 2) AS pct_of_total FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.region;"
+authoritative_seed42_mode_4,Mode 4 (Full ARMG),42,Q20,Category D — Semantic / Schema Trap Queries,What is the total revenue by region?,True,1,0,1,6548.063,,,325,0,0,1,,,,,"SELECT 
+    d.region, 
+    SUM(f.gross_revenue) AS total_revenue
+FROM 
+    fact_sales_performance f
+JOIN 
+    dim_geography d ON f.geo_key = d.geo_key
+GROUP BY 
+    d.region;","SELECT g.region, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.region;"
+authoritative_seed42_mode_4,Mode 4 (Full ARMG),42,Q21,Category D — Semantic / Schema Trap Queries,Show total discount by product category.,True,1,0,1,6336.964,,,326,0,0,1,,,,,"SELECT 
+    p.category,
+    SUM(f.discount_applied) AS total_discount
+FROM 
+    fact_sales_performance f
+JOIN 
+    dim_product p ON f.product_key = p.product_key
+GROUP BY 
+    p.category;","SELECT p.category, SUM(f.discount_applied) AS total_discount_applied FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
+authoritative_seed42_mode_4,Mode 4 (Full ARMG),42,Q22,Category D — Semantic / Schema Trap Queries,What is the total profit for each product category?,True,1,0,1,6335.463,,,330,0,0,1,,,,,"SELECT 
+    category, 
+    SUM(net_profit) AS total_profit
+FROM 
+    fact_sales_performance 
+JOIN 
+    dim_product 
+ON 
+    fact_sales_performance.product_key = dim_product.product_key
+GROUP BY 
+    category;","SELECT p.category, SUM(f.net_profit) AS total_net_profit FROM fact_sales_performance f JOIN dim_product p ON f.product_key = p.product_key GROUP BY p.category;"
+authoritative_seed42_mode_4,Mode 4 (Full ARMG),42,Q23,Category D — Semantic / Schema Trap Queries,What is the average cost of products in each sub-category?,True,1,0,1,5703.055,,,313,0,0,1,,,,,"SELECT 
+    sub_category, 
+    AVG(unit_cost) AS average_cost
+FROM 
+    dim_product
+GROUP BY 
+    sub_category;","SELECT p.sub_category, AVG(p.unit_cost) AS avg_unit_cost FROM dim_product p GROUP BY p.sub_category;"
+authoritative_seed42_mode_4,Mode 4 (Full ARMG),42,Q24,Category D — Semantic / Schema Trap Queries,What is the total gross revenue by market?,True,1,0,1,6633.536,,,330,0,0,1,,,,,"SELECT 
     m.market_type, 
     SUM(f.gross_revenue) AS total_gross_revenue
 FROM 
@@ -1442,7 +1440,7 @@ JOIN
     dim_geography m ON f.geo_key = m.geo_key
 GROUP BY 
     m.market_type;","SELECT g.market_type, SUM(f.gross_revenue) AS total_gross_revenue FROM fact_sales_performance f JOIN dim_geography g ON f.geo_key = g.geo_key GROUP BY g.market_type;"
-run_mode_6_1789109432,Mode 6 (ARMG - Temporal Decay),42,Q25,Category D — Semantic / Schema Trap Queries,What is the total profit and total revenue for each market type?,True,0,0,1,7900.883,,,364,0,0,1,,,,,"SELECT 
+authoritative_seed42_mode_4,Mode 4 (Full ARMG),42,Q25,Category D — Semantic / Schema Trap Queries,What is the total profit and total revenue for each market type?,True,0,0,1,7829.524,,,364,0,0,1,,,,,"SELECT 
     mt.market_type,
     SUM(sp.net_profit) AS total_profit,
     SUM(sp.gross_revenue) AS total_revenue

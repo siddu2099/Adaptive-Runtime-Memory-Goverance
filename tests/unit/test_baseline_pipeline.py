@@ -1,25 +1,30 @@
 """
-ARMG Phase 2: Stateless Baseline Text-to-SQL Pipeline Test Suite.
+ARMG Phase 2: Stateless Baseline Text-to-SQL Pipeline Unit Test Suite.
 
-Validates the complete linear stateless pipeline:
+Validates the complete linear stateless pipeline in hermetic isolation:
 A. Schema Introspection & Deterministic Markdown Formatting
 B. Deterministic Rule-Based Schema Pruning
 C. SQLGlot Execution Guard (multi-statements, DDL/DML, non-SELECT roots)
-D. Baseline SQL Generator communication with Ollama
-E. Three End-to-End Representative Analytical Queries
+D. Baseline SQL Generator Mock Unit Tests (payloads, response extraction, failure paths)
+E. Pipeline Orchestration Mock Tests (fully isolated from external daemons)
+
+Live database/Ollama tests are isolated in tests/integration/test_baseline_integration.py.
+Per Audit 1 Remediation Item REM-P0-04.
 """
 
+from unittest.mock import MagicMock, patch
 import pytest
+from agents.repair_agent import RepairSQLGenerator
 from agents.schema_introspector import SchemaIntrospector, format_catalog_to_markdown
 from agents.schema_pruner import SchemaPruner, prune_schema_tables
 from agents.sql_generator import SQLGenerator, extract_sql_from_response
-from environment.postgres import PostgreSQLEnvironment
+from environment.base import ExecutionResult, RuntimeEnvironment
 from scripts.run_baseline import BaselinePipeline, BaselineExecutionResult
 from validation.execution_validator import ExecutionValidator, validate_sql
 
 
 # ------------------------------------------------------------------------------
-# A. Schema Formatting Tests
+# A. Schema Formatting & Introspection Tests
 # ------------------------------------------------------------------------------
 def test_schema_formatting_deterministic():
     """Verify schema formatting contains all tables, columns, types, and is deterministic."""
@@ -58,17 +63,33 @@ def test_schema_formatting_deterministic():
     assert md1.index("## dim_product") < md1.index("## dim_time")
 
 
-def test_schema_introspector_live():
-    """Verify live schema introspector returns all 4 tables with columns and types."""
-    introspector = SchemaIntrospector()
+def test_schema_introspector_with_mock_env():
+    """Verify SchemaIntrospector extracts and formats markdown from environment inspect()."""
+    mock_env = MagicMock(spec=RuntimeEnvironment)
+    mock_env.inspect.return_value = {
+        "tables": {
+            "dim_geography": {
+                "columns": [
+                    {"name": "geo_key", "type": "integer", "primary_key": True, "ordinal_position": 1},
+                    {"name": "region", "type": "character varying", "primary_key": False, "ordinal_position": 2},
+                ]
+            },
+            "fact_sales_performance": {
+                "columns": [
+                    {"name": "fact_key", "type": "integer", "primary_key": True, "ordinal_position": 1},
+                    {"name": "gross_revenue", "type": "numeric", "primary_key": False, "ordinal_position": 2},
+                ]
+            }
+        }
+    }
+
+    introspector = SchemaIntrospector(env=mock_env)
     md = introspector.get_schema_markdown()
 
-    assert "## dim_time" in md
     assert "## dim_geography" in md
-    assert "## dim_product" in md
     assert "## fact_sales_performance" in md
+    assert "geo_key" in md
     assert "gross_revenue" in md
-    assert "net_profit" in md
 
 
 # ------------------------------------------------------------------------------
@@ -134,71 +155,102 @@ def test_validator_rejects_forbidden_statements(bad_sql, reason_keyword):
 
 
 # ------------------------------------------------------------------------------
-# D. Baseline SQL Generator Smoke Test
+# D. Mocked SQL Generator Unit Tests (Isolated from Ollama)
 # ------------------------------------------------------------------------------
-def test_generator_communication():
-    """Verify SQL generator can interact with local Ollama qwen2.5:7b-instruct."""
+def test_generator_mock_success_response():
+    """Verify SQLGenerator correctly parses successful LLM response with metrics."""
+    generator = SQLGenerator(seed=42)
+
+    with patch("requests.post") as mock_post:
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "response": "```sql\nSELECT region, SUM(gross_revenue) FROM fact_sales_performance GROUP BY region;\n```",
+            "prompt_eval_count": 45,
+            "eval_count": 22,
+        }
+        mock_response.raise_for_status.return_value = None
+        mock_post.return_value = mock_response
+
+        res = generator.generate("Total revenue by region", "## dim_geography\n## fact_sales_performance")
+
+        assert "SELECT region" in res.extracted_sql
+        assert res.prompt_tokens == 45
+        assert res.completion_tokens == 22
+        assert res.generation_duration_ms >= 0.0
+
+
+def test_generator_mock_network_failure():
+    """Verify SQLGenerator handles network exceptions gracefully without raising."""
     generator = SQLGenerator()
-    simple_schema = """## dim_geography\n- geo_key: integer (PK)\n- region: varchar"""
-    res = generator.generate("List all distinct regions.", simple_schema)
 
-    assert len(res.extracted_sql) > 0
-    assert "region" in res.extracted_sql.lower()
-    assert res.generation_duration_ms > 0.0
-    # Ollama provides token telemetry
-    assert res.prompt_tokens is not None or res.completion_tokens is not None
+    with patch("requests.post", side_effect=Exception("Connection refused")):
+        res = generator.generate("Question", "Schema")
+
+        assert res.raw_response == ""
+        assert res.extracted_sql == ""
+        assert res.prompt_tokens is None
+        assert res.completion_tokens is None
+        assert res.generation_duration_ms >= 0.0
+
+
+def test_repair_generator_mock_success():
+    """Verify RepairSQLGenerator correctly parses repair LLM response."""
+    repair_gen = RepairSQLGenerator(seed=123)
+
+    with patch("requests.post") as mock_post:
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "response": "```sql\nSELECT product_name FROM dim_product;\n```",
+            "prompt_eval_count": 60,
+            "eval_count": 15,
+        }
+        mock_response.raise_for_status.return_value = None
+        mock_post.return_value = mock_response
+
+        res = repair_gen.generate_repair("[STRICT REPAIR CONSTRAINTS]\nUse product_name")
+
+        assert res.extracted_sql == "SELECT product_name FROM dim_product;"
+        assert res.prompt_tokens == 60
+        assert res.completion_tokens == 15
 
 
 # ------------------------------------------------------------------------------
-# E. End-to-End Baseline Representative Queries
+# E. Baseline Pipeline Mock Orchestration Unit Test
 # ------------------------------------------------------------------------------
-@pytest.fixture(scope="module")
-def pipeline():
-    """Module-level baseline pipeline instance."""
-    pipe = BaselinePipeline()
-    yield pipe
-    pipe.env.close()
+def test_baseline_pipeline_mock_run():
+    """Verify complete BaselinePipeline orchestration with injected mock components."""
+    mock_env = MagicMock(spec=RuntimeEnvironment)
+    mock_env.inspect.return_value = {
+        "tables": {
+            "dim_geography": {
+                "columns": [{"name": "geo_key", "type": "int", "primary_key": True, "ordinal_position": 1}]
+            },
+            "fact_sales_performance": {
+                "columns": [{"name": "gross_revenue", "type": "numeric", "primary_key": False, "ordinal_position": 1}]
+            }
+        }
+    }
+    mock_env.execute.return_value = ExecutionResult(
+        status="SUCCESS",
+        query="SELECT SUM(gross_revenue) FROM fact_sales_performance;",
+        rows=[(50000.0,)],
+        row_count=1,
+        execution_time_ms=12.5,
+    )
 
+    mock_gen = MagicMock(spec=SQLGenerator)
+    mock_gen.generate.return_value = MagicMock(
+        extracted_sql="SELECT SUM(gross_revenue) FROM fact_sales_performance;",
+        prompt_tokens=30,
+        completion_tokens=10,
+        generation_duration_ms=45.0,
+    )
 
-def test_e2e_query_1_simple_aggregation(pipeline):
-    """Query 1: Simple single-metric aggregation over the fact table."""
-    q = "What is the total gross revenue?"
-    res: BaselineExecutionResult = pipeline.run(q)
+    pipeline = BaselinePipeline(env=mock_env, generator=mock_gen)
+    res = pipeline.run("What is total revenue?")
 
     assert res.validation_passed is True
     assert res.execution_status == "SUCCESS"
     assert res.row_count == 1
-    assert len(res.rows) == 1
-    # Verify result value is realistic (> 0)
-    total_rev = float(res.rows[0][0])
-    assert total_rev > 0.0
-    assert res.generation_latency_ms > 0.0
-    assert res.execution_latency_ms > 0.0
-    assert res.total_latency_ms > 0.0
-    print(f"\n[E2E Q1] SQL: {res.extracted_sql} | Result: {total_rev}")
-
-
-def test_e2e_query_2_two_table_join(pipeline):
-    """Query 2: Two-table analytical join grouping fact metrics by region."""
-    q = "What is the total revenue by region?"
-    res: BaselineExecutionResult = pipeline.run(q)
-
-    assert res.validation_passed is True
-    assert res.execution_status == "SUCCESS"
-    assert res.row_count >= 1  # 3 enterprise geographical regions in warehouse
-    assert res.generation_latency_ms > 0.0
-    assert res.execution_latency_ms > 0.0
-    print(f"\n[E2E Q2] SQL: {res.extracted_sql} | Rows: {res.row_count}")
-
-
-def test_e2e_query_3_three_table_join(pipeline):
-    """Query 3: Three-table analytical join grouping by product category and calendar year."""
-    q = "What is the net profit by product category and calendar year?"
-    res: BaselineExecutionResult = pipeline.run(q)
-
-    assert res.validation_passed is True
-    assert res.execution_status == "SUCCESS"
-    assert res.row_count >= 1
-    assert res.generation_latency_ms > 0.0
-    assert res.execution_latency_ms > 0.0
-    print(f"\n[E2E Q3] SQL: {res.extracted_sql} | Rows: {res.row_count}")
+    assert res.rows == [(50000.0,)]
+    assert res.total_latency_ms >= 0.0

@@ -23,7 +23,6 @@ from agents.sql_generator import GenerationResult, SQLGenerator
 from agents.taxonomy import TaxonomyCategory
 from environment.base import ExecutionResult, RuntimeEnvironment
 from environment.observation import ExecutionStatus, RuntimeObservation
-from environment.postgres import PostgreSQLEnvironment
 from graph.state import (
     ARMGState,
     STATUS_FAILED,
@@ -495,40 +494,3 @@ class TestDeterministicOrchestration:
             assert res["retry_count"] == 1
             assert res["generated_sql"] == "SELECT gross_revenue FROM fact_sales_performance;"
             assert res["previous_sql"] == "SELECT revenue FROM fact_sales_performance;"
-
-
-# =====================================================================
-# Live Integration Test (Target PostgreSQL Database)
-# =====================================================================
-
-class TestLivePostgreSQLEnvironment:
-    """Integration test with live PostgreSQL warehouse instance."""
-
-    def test_live_postgres_repair_execution(self):
-        env = PostgreSQLEnvironment()
-
-        mock_gen = SQLGenerator()
-        mock_gen.generate = lambda question, schema_markdown, **kw: GenerationResult(
-            raw_response="```sql\nSELECT revenue FROM fact_sales_performance;\n```",
-            extracted_sql="SELECT revenue FROM fact_sales_performance;",
-        )
-        mock_repair = RepairSQLGenerator(
-            generator_fn=lambda prompt: GenerationResult(
-                raw_response="```sql\nSELECT gross_revenue FROM fact_sales_performance;\n```",
-                extracted_sql="SELECT gross_revenue FROM fact_sales_performance;",
-            )
-        )
-
-        wf = ARMGRepairWorkflow(
-            environment=env,
-            sql_generator=mock_gen,
-            repair_generator=mock_repair,
-            embed_fn=deterministic_mock_embed_fn,
-        )
-        graph = wf.build_graph()
-
-        res = graph.invoke({"user_query": "Show total sales revenue", "max_retries": 3})
-        assert res["status"] == STATUS_SUCCESS
-        assert res["retry_count"] == 1
-        assert res["execution_result"] is not None
-        assert res["execution_result"].is_success is True

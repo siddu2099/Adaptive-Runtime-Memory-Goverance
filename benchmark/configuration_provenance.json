@@ -1,0 +1,78 @@
+{
+  "metadata": {
+    "provenance_schema_version": "ARMG_Phase7_Provenance_v1.0",
+    "git_commit": "40d36a3980e5f152a8eadbfa021b833f587d7b3b",
+    "benchmark_date_authoritative": "2026-10-06"
+  },
+  "system_environment": {
+    "os_name": "Windows",
+    "os_release": "11",
+    "os_version": "10.0.26300",
+    "processor": "AMD64 Family 25 Model 116 Stepping 1, AuthenticAMD",
+    "python_version": "3.13.2 (tags/v3.13.2:4f8bb39, Feb  4 2025, 15:23:48) [MSC v.1942 64 bit (AMD64)]",
+    "python_executable": "C:\\Users\\siddu\\AppData\\Local\\Programs\\Python\\Python313\\python.exe"
+  },
+  "database_engine": {
+    "rdbms": "PostgreSQL",
+    "version": "PostgreSQL 18.1 on x86_64-windows, compiled by msvc-19.44.35221, 64-bit",
+    "host": "localhost",
+    "port": 5432,
+    "schema_seed_version": "v1.0_synthetic_sales_star_schema",
+    "table_inventory": {
+      "database_name": "armg_db",
+      "tables": [
+        "dim_geography",
+        "dim_product",
+        "dim_time",
+        "fact_sales_performance"
+      ],
+      "fact_table_rows": 2000,
+      "time_rows": 365,
+      "product_rows": 8,
+      "geography_rows": 6
+    }
+  },
+  "neural_inference_stack": {
+    "provider": "Ollama",
+    "ollama_version": "0.32.15",
+    "base_url": "http://localhost:11434",
+    "generation_model": "qwen2.5:7b-instruct",
+    "embedding_model": "nomic-embed-text",
+    "generation_temperature": 0.0,
+    "embedding_dimension": 768,
+    "embedding_normalization": "Unit-L2 (norm = 1.0)"
+  },
+  "armg_governance_configuration": {
+    "admission_threshold_theta": 0.25,
+    "retrieval_similarity_threshold_tau": 0.5,
+    "similarity_metric": "Inverse Squared L2: 1.0 / (1.0 + d_sq)",
+    "retrieval_top_k": 3,
+    "max_repair_retries": 3,
+    "escalation_rate_alpha": 0.1,
+    "penalty_rate_beta": 0.15,
+    "stable_confidence_threshold": 0.8,
+    "archive_confidence_threshold": 0.2,
+    "archive_retention_days": 30,
+    "temporal_decay_rate_lambda": 0.05
+  },
+  "experimental_design": {
+    "benchmark_modes": [
+      "Mode 1 (Zero-Shot)",
+      "Mode 2 (Stateless Self-Correction)",
+      "Mode 3 (Naive Vector RAG)",
+      "Mode 4 (Full ARMG)",
+      "Mode 5 (ARMG - Negative Constraints)",
+      "Mode 6 (ARMG - Temporal Decay)"
+    ],
+    "benchmark_seeds": [
+      42,
+      123,
+      999
+    ],
+    "unique_queries_count": 25,
+    "queries_per_seed_mode": 25,
+    "total_evaluations": 450,
+    "stochastic_assumption": "Controlled deterministic repeated trials (temperature=0.0); not independent stochastic sampling",
+    "sample_std_ddof": 1
+  }
+}

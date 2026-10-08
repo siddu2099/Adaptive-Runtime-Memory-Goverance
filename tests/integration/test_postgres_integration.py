@@ -1,5 +1,6 @@
 """
-ARMG Phase 1: PostgreSQL Environment Adapter Verification Suite.
+ARMG Integration Test Suite: PostgreSQL Environment Adapter.
+Phase 3 Test Architecture Implementation.
 
 Validates the PostgreSQLEnvironment adapter against the live Star Schema warehouse:
 - RuntimeEnvironment Protocol conformance
@@ -13,16 +14,33 @@ Validates the PostgreSQLEnvironment adapter against the live Star Schema warehou
     * Syntax error
 - Pre-execution validation via SQLGlot
 - Connection lifecycle management and zero resource leakage
+
+Requires live PostgreSQL on localhost:5432.
 """
 
 import pytest
 from environment.base import ExecutionResult, RuntimeEnvironment
 from environment.postgres import PostgreSQLEnvironment
 
+pytestmark = pytest.mark.integration
+
+
+def is_postgres_online() -> bool:
+    """Check if PostgreSQL server is reachable."""
+    try:
+        env = PostgreSQLEnvironment()
+        res = env.execute("SELECT 1;")
+        env.close()
+        return res.is_success
+    except Exception:
+        return False
+
 
 @pytest.fixture
 def env():
     """Fixture providing a managed PostgreSQLEnvironment instance."""
+    if not is_postgres_online():
+        pytest.skip("PostgreSQL database is offline or unreachable on localhost:5432")
     adapter = PostgreSQLEnvironment()
     yield adapter
     adapter.close()
@@ -200,6 +218,9 @@ def test_pre_execution_validation(env):
 
 def test_connection_cleanup_and_lifecycle():
     """Verify connection is cleanly closed and does not leak resources."""
+    if not is_postgres_online():
+        pytest.skip("PostgreSQL database is offline or unreachable on localhost:5432")
+
     with PostgreSQLEnvironment() as scoped_env:
         res = scoped_env.execute("SELECT 1;")
         assert res.is_success is True

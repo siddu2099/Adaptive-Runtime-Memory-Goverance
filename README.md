@@ -7,8 +7,8 @@ Adaptive Runtime Memory Governance (ARMG) is a runtime operational knowledge fra
 
 ## Prerequisites & Requirements
 - **Operating System**: Windows / Linux / macOS (Tested on Windows 11 x64)
-- **Python**: 3.11+ (Installed: Python 3.11.9)
-- **Database Engine**: PostgreSQL 15+ (Installed: PostgreSQL 18.1)
+- **Python**: 3.11+ (Project Virtual Environment: Python 3.11.9; Host System: Python 3.13.2)
+- **Database Engine**: PostgreSQL 15+ (Installed & Tested: PostgreSQL 18.1 on localhost:5432)
 - **Local Inference Engine**: Ollama (Installed: 0.32.15)
 - **Required Models**:
   - `qwen2.5:7b-instruct` (LLM inference and SQL generation)
@@ -141,10 +141,58 @@ To re-initialize the Star Schema tables and populate the 2,000 transactions (see
 
 ---
 
-### 5. Run the Full Test Suite (138 Tests)
+### 5. Run the Automated Test Suite (401 Tests Total)
+ 
+- **Hermetic Unit Test Suite (372 Tests)**:
+  Zero external network dependencies, offline-safe, mocks external daemons:
+  ```powershell
+  pytest tests/unit/ -v
+  ```
 
-To run the complete automated regression test suite across all phases:
-```powershell
-.\.venv\Scripts\pytest tests/ -v
-```
+- **Live Integration & Environment Test Suite (29 Tests)**:
+  Requires live PostgreSQL on port 5432 and live Ollama on port 11434 (17 integration + 12 environment):
+  ```powershell
+  pytest tests/integration/ tests/test_env.py -v
+  ```
+
+- **Run All Tests (401 Tests)**:
+  ```powershell
+  pytest tests/ -v
+  ```
+
+---
+
+### 6. Reproducibility & Forensic Verification Pipeline
+
+To independently verify empirical evidence integrity, validate provenance, and reproduce derived publication artifacts:
+
+1. **Validate Benchmark Data Integrity & Smoke Exclusion**:
+   ```powershell
+   python scripts/verify_phase4_data_integrity.py
+   ```
+
+2. **Validate Retrieval Telemetry Provenance**:
+   ```powershell
+   python scripts/verify_phase4_telemetry_provenance.py
+   ```
+
+3. **Validate Numerical Validation Tables**:
+   ```powershell
+   python scripts/verify_validation_tables.py
+   ```
+
+4. **Validate Temporal Decay Mathematical Invariants**:
+   ```powershell
+   python scripts/validate_temporal_decay.py
+   ```
+
+5. **Run Reproducibility, Paired Analysis & Lineage Audit**:
+   ```powershell
+   python scripts/analyze_reproducibility.py
+   ```
+
+6. **Regenerate Canonical Derived Tables, Figures & Summaries**:
+   ```powershell
+   python scripts/generate_results.py
+   ```
 

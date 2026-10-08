@@ -6,12 +6,12 @@
 \hline
 \textbf{Evaluation Dimension} & \textbf{Mode 2} & \textbf{Mode 4} & \textbf{Absolute Delta} & \textbf{Relative Delta} & \textbf{Operational Engineering Interpretation} \\
 \hline
-Mean Repair Retries ($K$) & 0.43 & 0.28 & $-0.15$ retries & $-34.38\%$ & Observed reduction in repair iterations \\
-Mean Token Expenditure & 572.72 & 542.37 & $-30.35$ tokens & $-5.30\%$ & Token savings by avoiding repetitive repair prompts \\
-PostgreSQL Execution Success & $92.00\%$ & $96.00\%$ & $+4.00\text{ pp}$ & $+4.35\%$ & Execution recovery on Query Q19 \\
-End-to-End Latency & $7,149.68\text{ ms}$ & $8,564.89\text{ ms}$ & $+1,415.21\text{ ms}$ & $+19.79\%$ & Architectural overhead of state graph and FAISS \\
-Relational Semantic Accuracy & $68.00\%$ & $68.00\%$ & $0.00\text{ pp}$ & $0.00\%$ & Observed identical relational execution accuracy in the evaluated benchmark \\
+Mean Repair Retries ($K$) & 0.28 & 0.37 & $+0.09$ retries & $+33.33\%$ & Observed shift in repair iterations \\
+Mean Token Expenditure & 503.72 & 602.85 & $+99.13$ tokens & $+19.68\%$ & Token expenditure difference in repair prompts \\
+PostgreSQL Execution Success & $96.00\%$ & $96.00\%$ & $+0.00\text{ pp}$ & $+0.00\%$ & Physical execution success recovery comparison \\
+End-to-End Latency & $6,441.56\text{ ms}$ & $9,000.59\text{ ms}$ & $+2,559.03\text{ ms}$ & $+39.73\%$ & Architectural overhead of state graph and FAISS \\
+Relational Semantic Accuracy & $68.00\%$ & $68.00\%$ & $+0.00\text{ pp}$ & $0.00\%$ & Observed identical relational execution accuracy in the evaluated benchmark \\
 \hline
-\multicolumn{6}{l}{\footnotesize \textsuperscript{*}Percentage points (pp) and relative percentage changes (\%) are strictly distinguished.} \\
+\multicolumn{6}{l}{\footnotesize \textsuperscript{*}Percentage points (pp) and relative percentage changes (\%) are strictly distinguished. Derived dynamically from raw CSV benchmark run logs.} \\
 \end{tabular}
 \end{table*}

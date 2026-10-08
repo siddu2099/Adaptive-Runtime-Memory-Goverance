@@ -130,8 +130,8 @@ def run_mode_experiment(
     introspector = SchemaIntrospector(env)
     pruner = SchemaPruner()
     validator = ExecutionValidator()
-    generator = SQLGenerator()
-    repair_generator = RepairSQLGenerator()
+    generator = SQLGenerator(seed=seed)
+    repair_generator = RepairSQLGenerator(seed=seed)
 
     if mode_name == "mode_1":
         for item in dataset:

@@ -1,0 +1,128 @@
+{
+  "metadata": {
+    "lineage_version": "ARMG_Phase7_Lineage_v1.0",
+    "authoritative_root_source": "benchmark/benchmark_results.csv",
+    "authoritative_telemetry_source": "benchmark/retrieval_telemetry.csv",
+    "analysis_module": "benchmark/analysis.py",
+    "results_generator": "scripts/generate_results.py"
+  },
+  "metrics": [
+    {
+      "metric_name": "Execution Success (ExecSucc)",
+      "raw_source": "benchmark/benchmark_results.csv (and seed partitions)",
+      "raw_field": "success (boolean: True / False)",
+      "analysis_function": "benchmark.analysis.compute_benchmark_metrics()",
+      "transformation_formula": "mean(success == True) * 100.0 per mode-run, then mean and sample std (ddof=1) across seeds",
+      "primary_outputs": [
+        "manuscript/tables/table2_results.tex (Table II)",
+        "manuscript/tables/table_fig4_validation.tex (Table B)",
+        "manuscript/figures/png/fig4_execsucc_execacc.png (Figure 4)",
+        "benchmark/statistical_summary.csv",
+        "benchmark/statistical_summary.json"
+      ],
+      "verified_mode4_value": "96.00% +- 0.00%",
+      "verified_mode2_value": "96.00% +- 0.00%"
+    },
+    {
+      "metric_name": "Relational Semantic Accuracy (ExecAcc)",
+      "raw_source": "benchmark/benchmark_results.csv (and seed partitions)",
+      "raw_field": "execution_accuracy (boolean: True / False)",
+      "analysis_function": "benchmark.analysis.compute_benchmark_metrics()",
+      "transformation_formula": "mean(execution_accuracy == True) * 100.0 per mode-run, then mean and sample std (ddof=1) across seeds",
+      "primary_outputs": [
+        "manuscript/tables/table2_results.tex (Table II)",
+        "manuscript/tables/table_fig4_validation.tex (Table B)",
+        "manuscript/figures/png/fig4_execsucc_execacc.png (Figure 4)",
+        "benchmark/statistical_summary.csv",
+        "benchmark/statistical_summary.json"
+      ],
+      "verified_mode4_value": "68.00% +- 0.00%",
+      "verified_mode2_value": "68.00% +- 0.00%"
+    },
+    {
+      "metric_name": "Mean Retry Count",
+      "raw_source": "benchmark/benchmark_results.csv (and seed partitions)",
+      "raw_field": "retry_count (integer in [0, 3])",
+      "analysis_function": "benchmark.analysis.compute_benchmark_metrics()",
+      "transformation_formula": "mean(retry_count) per mode-run, then mean and sample std (ddof=1) across seeds",
+      "primary_outputs": [
+        "manuscript/tables/table2_results.tex (Table II)",
+        "manuscript/tables/table8_tradeoff.tex (Table VIII)",
+        "manuscript/tables/table_fig5_validation.tex (Table C)",
+        "manuscript/figures/png/fig5_tradeoff.png (Figure 5)",
+        "benchmark/statistical_summary.csv"
+      ],
+      "verified_mode4_value": "0.37 +- 0.05",
+      "verified_mode2_value": "0.28 +- 0.00"
+    },
+    {
+      "metric_name": "Total Tokens Consumed",
+      "raw_source": "benchmark/benchmark_results.csv (and seed partitions)",
+      "raw_field": "total_tokens (integer >= 0)",
+      "analysis_function": "benchmark.analysis.compute_benchmark_metrics()",
+      "transformation_formula": "mean(total_tokens) per mode-run, then mean and sample std (ddof=1) across seeds",
+      "primary_outputs": [
+        "manuscript/tables/table2_results.tex (Table II)",
+        "manuscript/tables/table8_tradeoff.tex (Table VIII)",
+        "manuscript/tables/table_fig5_validation.tex (Table C)",
+        "manuscript/figures/png/fig5_tradeoff.png (Figure 5)",
+        "benchmark/statistical_summary.csv"
+      ],
+      "verified_mode4_value": "602.85 +- 28.49",
+      "verified_mode2_value": "503.72 +- 0.42"
+    },
+    {
+      "metric_name": "Total Latency (ms)",
+      "raw_source": "benchmark/benchmark_results.csv (and seed partitions)",
+      "raw_field": "latency_ms (float >= 0.0)",
+      "analysis_function": "benchmark.analysis.compute_benchmark_metrics()",
+      "transformation_formula": "mean(latency_ms) per mode-run, then mean and sample std (ddof=1) across seeds",
+      "primary_outputs": [
+        "manuscript/tables/table2_results.tex (Table II)",
+        "manuscript/tables/table8_tradeoff.tex (Table VIII)",
+        "manuscript/tables/table_fig5_validation.tex (Table C)",
+        "manuscript/figures/png/fig5_tradeoff.png (Figure 5)",
+        "benchmark/statistical_summary.csv"
+      ],
+      "verified_mode4_value": "9000.59 +- 184.33 ms",
+      "verified_mode2_value": "6441.56 +- 105.51 ms"
+    },
+    {
+      "metric_name": "Memory Store Size Accumulation",
+      "raw_source": "benchmark/benchmark_results.csv & benchmark/retrieval_telemetry.csv",
+      "raw_field": "memory_admission, store_size_after_query",
+      "analysis_function": "scripts.generate_results.generate_publication_tables() [Table D logic]",
+      "transformation_formula": "Sequential reconstruction of store size after each query Q01 -> Q25",
+      "primary_outputs": [
+        "manuscript/tables/table_fig6_validation.tex (Table D)",
+        "manuscript/figures/png/fig6_memory_growth.png (Figure 6)"
+      ],
+      "verified_mode4_value": "Reaches persistent plateau of exactly 3 memories at Q04 (admitted Q01, Q03, Q04)",
+      "verified_mode3_value": "Unmanaged naive accumulation reaching 23 memories"
+    },
+    {
+      "metric_name": "FAISS Retrieval Cosine Similarity",
+      "raw_source": "benchmark/retrieval_telemetry.csv",
+      "raw_field": "distance_l2_sq, similarity, passed_retrieval_threshold",
+      "analysis_function": "benchmark.analysis.compute_retrieval_telemetry_metrics()",
+      "transformation_formula": "similarity = 1.0 / (1.0 + distance_l2_sq); retrieved if similarity >= 0.50",
+      "primary_outputs": [
+        "manuscript/tables/table_fig3_validation.tex (Table A)",
+        "manuscript/figures/png/fig3_retrieval_geometry.png (Figure 3)"
+      ],
+      "verified_mode4_value": "16 retrieval events across 12 distinct queries; Top-S values in [0.4755, 0.5388]"
+    },
+    {
+      "metric_name": "Divergent Semantic Queries",
+      "raw_source": "benchmark/benchmark_results.csv",
+      "raw_field": "success == True and execution_accuracy == False",
+      "analysis_function": "Adversarial filtering: sub[(sub['success'] == True) & (sub['execution_accuracy'] == False)]",
+      "transformation_formula": "Identifies queries passing PostgreSQL execution syntax/catalog but failing relational tuple equality",
+      "primary_outputs": [
+        "manuscript/tables/table9_failures.tex (Table IX)",
+        "manuscript/tables/table3_gap.tex (Table III)"
+      ],
+      "verified_mode4_value": "Exactly 7 queries (Q05, Q14, Q15, Q17, Q18, Q19, Q25) across all 3 seeds (21 instances)"
+    }
+  ]
+}

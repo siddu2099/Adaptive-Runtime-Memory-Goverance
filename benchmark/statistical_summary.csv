@@ -1,0 +1,7 @@
+mode,sample_size_seeds,total_queries_evaluated,exec_succ_num,exec_succ_mean_pct,exec_succ_std_pct,rel_acc_num,rel_acc_mean_pct,rel_acc_std_pct,retries_mean,retries_std,latency_ms_mean,latency_ms_std,tokens_mean,tokens_std
+Mode 1 (Zero-Shot),3,75,60,80.0,0.0,45,60.0,0.0,0.0,0.0,4859.7,7.98,360.57,0.37
+Mode 2 (Stateless Self-Correction),3,75,72,96.0,0.0,51,68.0,0.0,0.28,0.0,6441.56,105.51,503.72,0.42
+Mode 3 (Naive Vector RAG),3,75,69,92.0,0.0,51,68.0,0.0,0.0,0.0,6776.25,34.4,558.28,0.0
+Mode 4 (Full ARMG),3,75,72,96.0,0.0,51,68.0,0.0,0.37,0.05,9000.59,184.33,602.85,28.49
+Mode 5 (ARMG - Negative Constraints),3,75,72,96.0,0.0,51,68.0,0.0,0.32,0.0,8768.48,100.3,530.97,0.4
+Mode 6 (ARMG - Temporal Decay),3,75,72,96.0,0.0,51,68.0,0.0,0.28,0.0,8507.98,73.15,542.27,0.39

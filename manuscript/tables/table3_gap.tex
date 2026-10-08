@@ -6,13 +6,13 @@
 \hline
 \textbf{Experimental Mode} & \textbf{ExecSucc (\%)} & \textbf{ExecAcc (\%)} & \textbf{Discrepancy Gap (pp)} \\
 \hline
-Mode 1 (Zero-Shot) & 76.00 & 57.33 & 18.67 \\
-Mode 2 (Stateless Self-Correction) & 92.00 & 68.00 & 24.00 \\
+Mode 1 (Zero-Shot) & 80.00 & 60.00 & 20.00 \\
+Mode 2 (Stateless Self-Correction) & 96.00 & 68.00 & 28.00 \\
 Mode 3 (Naive Vector RAG) & 92.00 & 68.00 & 24.00 \\
 Mode 4 (Full ARMG) & 96.00 & 68.00 & 28.00 \\
-Mode 5 (ARMG $-$ Neg Constraints) & 96.00 & 68.00 & 28.00 \\
-Mode 6 (ARMG with $\lambda = 0.0$) & 94.67 & 68.00 & 26.67 \\
+Mode 5 (ARMG - Negative Constraints) & 96.00 & 68.00 & 28.00 \\
+Mode 6 (ARMG - Temporal Decay) & 96.00 & 68.00 & 28.00 \\
 \hline
-\multicolumn{4}{l}{\footnotesize Discrepancy Gap defined as $\text{ExecSucc} - \text{ExecAcc}$ in percentage points (pp).} \\
+\multicolumn{4}{l}{\footnotesize Discrepancy Gap defined as $\text{ExecSucc} - \text{ExecAcc}$ in percentage points (pp). Dynamically derived from raw benchmark run logs.} \\
 \end{tabular}
 \end{table}

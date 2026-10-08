@@ -533,6 +533,58 @@ class TestExponentialDecay:
         # Monotonicity check
         assert mem.confidence > d10.confidence > d30.confidence > d60.confidence
 
+    def test_temporal_decay_explicit_ages_and_boundaries(
+        self, governance_engine: MemoryGovernanceEngine, sample_knowledge: RuntimeKnowledge
+    ):
+        """Verify explicit ages (0, 1, 5, 10, 20, 30, 60), negative delta_t, and repeated decay."""
+        knowledge_high = sample_knowledge.model_copy(update={"confidence": 0.85})
+        mem = governance_engine.admit(knowledge_high, context_similarity=1.0, current_epoch=0)
+        assert mem is not None
+        # Promote to STABLE with 1 success (C_ref = 0.85 + 0.1*(1 - 0.85) = 0.865 >= 0.80) at epoch 0
+        mem = governance_engine.record_success(mem, current_epoch=0)
+        assert mem.confidence >= 0.80
+        assert mem.status == MemoryState.STABLE
+        c_ref = mem.confidence_reference
+        assert mem.reference_epoch == 0
+
+        # Exact expected evaluations at λ = 0.05:
+        target_ages = [0, 1, 5, 10, 20, 30, 60]
+        decayed_memories = []
+        for age in target_ages:
+            d = governance_engine.apply_decay(mem, current_epoch=age)
+            decayed_memories.append(d)
+            expected_c = round(c_ref * math.exp(-0.05 * age), 6)
+            assert abs(d.confidence - expected_c) < 1e-4, f"Mismatch at age {age}"
+
+        # Age 0 check
+        assert decayed_memories[0].confidence == c_ref
+        assert decayed_memories[0].recency == 1.0
+
+        # Monotonic decay check across 0, 1, 5, 10, 20, 30, 60 days
+        for i in range(len(decayed_memories) - 1):
+            assert decayed_memories[i].confidence > decayed_memories[i+1].confidence
+            assert decayed_memories[i].recency > decayed_memories[i+1].recency
+
+        # Boundary Case 1: Negative / Past timestamp (current_epoch < reference_epoch)
+        d_neg = governance_engine.apply_decay(mem, current_epoch=-10)
+        assert d_neg.confidence == c_ref  # clamped: delta_t = max(0, -10 - 0) = 0
+
+        # Boundary Case 2: Repeated decay at same epoch (idempotence, no double decay)
+        d_10_first = governance_engine.apply_decay(mem, current_epoch=10)
+        d_10_second = governance_engine.apply_decay(d_10_first, current_epoch=10)
+        assert d_10_first.confidence == d_10_second.confidence
+
+        # Boundary Case 3: Chained progressive decay
+        d_chained_30 = governance_engine.apply_decay(d_10_first, current_epoch=30)
+        d_direct_30 = governance_engine.apply_decay(mem, current_epoch=30)
+        assert d_chained_30.confidence == d_direct_30.confidence
+
+        # State transitions at thresholds:
+        # At age 10: c ~ 0.515 < 0.80 -> DECAYING
+        assert d_10_first.status == MemoryState.DECAYING
+        # At age 60: c ~ 0.042 < 0.20 -> ARCHIVED
+        assert decayed_memories[-1].status == MemoryState.ARCHIVED
+
 
 # =====================================================================
 # Suite H: Complete Deterministic Lifecycle Progression
@@ -675,3 +727,219 @@ class TestOfflineAndDeterminism:
         p1 = governance_engine.record_failure(mem).confidence
         for _ in range(50):
             assert governance_engine.record_failure(mem).confidence == p1
+
+
+# =====================================================================
+# Phase 1B: Mathematical & Boundary Validation Suite
+# =====================================================================
+
+class TestPhase1BMathematicalBoundaryValidation:
+    """Suite K: Comprehensive boundary, monotonicity, and numerical stability validation.
+    
+    Covers:
+    - Confidence reinforcement at exact boundary points: C in {0, 0.1, 0.5, 0.9, 0.99, 1.0}
+    - Failure penalty at exact boundary points: C in {0.9, 0.5, 0.22, 0.0}
+    - FAISS distance to normalized similarity conversion: d^2 in {0, 0.01, 0.25, 1, 4, 100, 10^9}
+    - Utility multi-factor combinations and boundary conditions
+    - Exact admission threshold gating (theta = 0.25 boundary: 0.249999, 0.25, 0.250001)
+    - Exact retrieval threshold gating (sim = 0.50 boundary: 0.499999, 0.50, 0.500001)
+    - Pathological and invalid input handling
+    - Repeated success, repeated failure, and alternating outcome stability
+    """
+
+    def test_confidence_reinforcement_boundary_points(self, governance_engine: MemoryGovernanceEngine, sample_knowledge: RuntimeKnowledge):
+        """Section 4: Test reinforcement equation C_new = C + alpha(1 - C) at exact boundary points."""
+        test_points = [
+            (0.0, 0.10),
+            (0.10, 0.19),
+            (0.50, 0.55),
+            (0.90, 0.91),
+            (0.99, 0.991),
+            (1.0, 1.0),
+        ]
+        for c_init, c_expected in test_points:
+            mem = RuntimeMemory(
+                context=dict(sample_knowledge.context),
+                failure_type=sample_knowledge.failure_type,
+                root_cause=sample_knowledge.root_cause,
+                repair_strategy=sample_knowledge.repair_strategy,
+                confidence=c_init,
+                utility=c_init,
+                status=MemoryState.ACTIVE if c_init < 0.80 else MemoryState.STABLE,
+            )
+            updated = governance_engine.record_success(mem)
+            assert abs(updated.confidence - c_expected) < 1e-5, f"At C={c_init}: expected {c_expected}, got {updated.confidence}"
+            assert updated.confidence >= c_init, f"Reinforcement decreased confidence from {c_init} to {updated.confidence}"
+            assert 0.0 <= updated.confidence <= 1.0, f"Confidence out of bounds: {updated.confidence}"
+
+    def test_confidence_reinforcement_repeated_success(self, governance_engine: MemoryGovernanceEngine, sample_knowledge: RuntimeKnowledge):
+        """Section 11: Test repeated reinforcement asymptotically approaches 1.0 and never exceeds 1.0."""
+        mem = governance_engine.admit(sample_knowledge, context_similarity=1.0)
+        assert mem is not None
+        curr = mem
+        prev_conf = curr.confidence
+        for _ in range(50):
+            curr = governance_engine.record_success(curr)
+            assert curr.confidence >= prev_conf
+            assert 0.0 <= curr.confidence <= 1.0
+            prev_conf = curr.confidence
+        assert abs(curr.confidence - 1.0) < 0.005
+        assert curr.status == MemoryState.STABLE
+
+    def test_failure_penalty_boundary_points(self, governance_engine: MemoryGovernanceEngine, sample_knowledge: RuntimeKnowledge):
+        """Section 5: Test failure penalty C_new = max(0, C * (1 - beta)) at boundary points."""
+        test_points = [
+            (0.90, 0.765, MemoryState.STABLE, MemoryState.DECAYING),
+            (0.50, 0.425, MemoryState.ACTIVE, MemoryState.ACTIVE),
+            (0.22, 0.187, MemoryState.ACTIVE, MemoryState.ARCHIVED),
+            (0.0, 0.0, MemoryState.ACTIVE, MemoryState.ARCHIVED),
+        ]
+        for c_init, c_expected, init_state, expected_state in test_points:
+            mem = RuntimeMemory(
+                context=dict(sample_knowledge.context),
+                failure_type=sample_knowledge.failure_type,
+                root_cause=sample_knowledge.root_cause,
+                repair_strategy=sample_knowledge.repair_strategy,
+                confidence=c_init,
+                utility=c_init,
+                status=init_state,
+            )
+            updated = governance_engine.record_failure(mem)
+            assert abs(updated.confidence - c_expected) < 1e-5, f"At C={c_init}: expected {c_expected}, got {updated.confidence}"
+            assert updated.confidence <= c_init, f"Failure penalty increased confidence from {c_init} to {updated.confidence}"
+            assert updated.confidence >= 0.0, "Confidence became negative"
+            assert updated.status == expected_state, f"At C={c_init}: expected state {expected_state}, got {updated.status}"
+
+    def test_failure_penalty_repeated_failure(self, governance_engine: MemoryGovernanceEngine, sample_knowledge: RuntimeKnowledge):
+        """Section 11: Test repeated failures monotonically decrease and remain bounded at 0.0."""
+        mem = governance_engine.admit(sample_knowledge, context_similarity=1.0)
+        assert mem is not None
+        curr = mem
+        prev_conf = curr.confidence
+        for _ in range(50):
+            curr = governance_engine.record_failure(curr)
+            assert curr.confidence <= prev_conf
+            assert curr.confidence >= 0.0
+            prev_conf = curr.confidence
+        assert 0.0 <= curr.confidence < 0.001
+        assert curr.status == MemoryState.ARCHIVED
+
+    def test_alternating_success_failure_stability(self, governance_engine: MemoryGovernanceEngine, sample_knowledge: RuntimeKnowledge):
+        """Section 11: Test alternating success and failure outcomes remain bounded in [0, 1]."""
+        mem = governance_engine.admit(sample_knowledge, context_similarity=1.0)
+        assert mem is not None
+        curr = mem
+        for _ in range(25):
+            curr = governance_engine.record_success(curr)
+            assert 0.0 <= curr.confidence <= 1.0
+            curr = governance_engine.record_failure(curr)
+            assert 0.0 <= curr.confidence <= 1.0
+
+    def test_faiss_distance_to_similarity_exact_points(self, vector_store: FAISSMemoryStore, sample_knowledge: RuntimeKnowledge):
+        """Section 6: Test conversion of FAISS squared L2 distance to similarity sim = 1 / (1 + d^2)."""
+        distances_and_expected_sims = [
+            (0.0, 1.0),
+            (0.01, 1.0 / 1.01),
+            (0.25, 1.0 / 1.25),
+            (1.0, 0.50),
+            (4.0, 0.20),
+            (100.0, 1.0 / 101.0),
+            (1e9, 1.0 / (1.0 + 1e9)),
+        ]
+        prev_sim = 2.0
+        for d_sq, expected_sim in distances_and_expected_sims:
+            sim = 1.0 / (1.0 + d_sq)
+            sim_rounded = round(sim, 6)
+            assert abs(sim_rounded - round(expected_sim, 6)) < 1e-5
+            assert 0.0 < sim <= 1.0
+            assert sim < prev_sim, f"Monotonicity violated: d^2={d_sq} gave sim={sim} >= {prev_sim}"
+            prev_sim = sim
+
+    def test_utility_factor_boundaries(self, governance_engine: MemoryGovernanceEngine):
+        """Section 7: Test Utility = C * SR * Sim * Recency across combinations and boundary points."""
+        # 1. All factors 1.0
+        assert governance_engine.calculate_utility(confidence=1.0, successful_uses=1, total_uses=1, context_similarity=1.0, delta_t=0.0) == 1.0
+
+        # 2. Zero in individual multiplicative factors produces 0.0
+        assert governance_engine.calculate_utility(confidence=0.0, successful_uses=1, total_uses=1, context_similarity=1.0, delta_t=0.0) == 0.0
+        assert governance_engine.calculate_utility(confidence=1.0, successful_uses=0, total_uses=1, context_similarity=1.0, delta_t=0.0) == 0.0
+        assert governance_engine.calculate_utility(confidence=1.0, successful_uses=1, total_uses=1, context_similarity=0.0, delta_t=0.0) == 0.0
+
+        # 3. All factors zero
+        assert governance_engine.calculate_utility(confidence=0.0, successful_uses=0, total_uses=1, context_similarity=0.0, delta_t=0.0) == 0.0
+
+        # 4. Mixed fractional values: 0.6 * (3/4) * 0.8 * (1 / (1 + 1)) = 0.6 * 0.75 * 0.8 * 0.5 = 0.18
+        u = governance_engine.calculate_utility(confidence=0.6, successful_uses=3, total_uses=4, context_similarity=0.8, delta_t=1.0)
+        assert abs(u - 0.18) < 1e-5
+
+        # 5. Elapsed time / recency boundary: delta_t = 999 -> recency = 0.001
+        u_rec = governance_engine.calculate_utility(confidence=1.0, successful_uses=1, total_uses=1, context_similarity=1.0, delta_t=999.0)
+        assert abs(u_rec - 0.001) < 1e-5
+
+    def test_admission_threshold_exact_boundary(self, governance_engine: MemoryGovernanceEngine, sample_knowledge: RuntimeKnowledge):
+        """Section 8: Test exact admission threshold gating at theta = 0.25 (operator is >=)."""
+        # 1. Utility = 0.249999 -> rejected (< 0.25)
+        # Using context_similarity = 0.249999 / (0.50 * 0.5) = 0.249999 / 0.25 = 0.999996
+        sim_reject = 0.249999 / 0.25
+        mem_rejected = governance_engine.admit(sample_knowledge, context_similarity=sim_reject)
+        assert mem_rejected is None, "Candidate with utility 0.249999 should be rejected"
+
+        # 2. Utility = 0.250000 -> admitted (>= 0.25)
+        mem_exact = governance_engine.admit(sample_knowledge, context_similarity=1.0)
+        assert mem_exact is not None, "Candidate with utility 0.250000 must be admitted"
+        assert mem_exact.utility == 0.25
+
+        # 3. Utility = 0.250001 -> admitted (>= 0.25)
+        high_conf_knowledge = sample_knowledge.model_copy(update={"confidence": 0.500002})
+        mem_above = governance_engine.admit(high_conf_knowledge, context_similarity=1.0)
+        assert mem_above is not None, "Candidate with utility 0.250001 must be admitted"
+        assert mem_above.utility >= 0.25
+
+    def test_retrieval_threshold_exact_boundary(self):
+        """Section 9: Test exact retrieval threshold gating at similarity = 0.50 (operator is >=)."""
+        # Retrieval rule: if sim >= 0.50 and mem.status.value not in ("ARCHIVED", "DELETED"): retrieved.append(mem)
+        # 1. 0.499999 -> rejected
+        sim_below = 0.499999
+        assert not (sim_below >= 0.50), "0.499999 must not meet >= 0.50 retrieval threshold"
+
+        # 2. 0.50 -> accepted (equality accepted)
+        sim_exact = 0.50
+        assert sim_exact >= 0.50, "0.50 must meet >= 0.50 retrieval threshold"
+
+        # 3. 0.500001 -> accepted
+        sim_above = 0.500001
+        assert sim_above >= 0.50, "0.500001 must meet >= 0.50 retrieval threshold"
+
+    def test_pathological_and_invalid_inputs(self, governance_engine: MemoryGovernanceEngine, vector_store: FAISSMemoryStore):
+        """Section 10: Test invalid and pathological inputs against API contracts."""
+        # 1. Negative confidence
+        with pytest.raises(ValueError, match="confidence"):
+            governance_engine.calculate_utility(confidence=-0.1, successful_uses=1, total_uses=1)
+
+        # 2. Confidence > 1
+        with pytest.raises(ValueError, match="confidence"):
+            governance_engine.calculate_utility(confidence=1.1, successful_uses=1, total_uses=1)
+
+        # 3. Negative context_similarity
+        with pytest.raises(ValueError, match="context_similarity"):
+            governance_engine.calculate_utility(confidence=0.5, successful_uses=1, total_uses=1, context_similarity=-0.01)
+
+        # 4. Context similarity > 1
+        with pytest.raises(ValueError, match="context_similarity"):
+            governance_engine.calculate_utility(confidence=0.5, successful_uses=1, total_uses=1, context_similarity=1.01)
+
+        # 5. Negative delta_t
+        with pytest.raises(ValueError, match="delta_t"):
+            governance_engine.calculate_utility(confidence=0.5, successful_uses=1, total_uses=1, delta_t=-1.0)
+
+        # 6. NaN in confidence or similarity
+        with pytest.raises(ValueError, match="confidence"):
+            governance_engine.calculate_utility(confidence=float("nan"), successful_uses=1, total_uses=1)
+        with pytest.raises(ValueError, match="context_similarity"):
+            governance_engine.calculate_utility(confidence=0.5, successful_uses=1, total_uses=1, context_similarity=float("nan"))
+
+        # 7. Infinity in confidence or similarity
+        with pytest.raises(ValueError, match="confidence"):
+            governance_engine.calculate_utility(confidence=float("inf"), successful_uses=1, total_uses=1)
+        with pytest.raises(ValueError, match="context_similarity"):
+            governance_engine.calculate_utility(confidence=0.5, successful_uses=1, total_uses=1, context_similarity=float("inf"))

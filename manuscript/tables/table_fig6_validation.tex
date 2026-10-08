@@ -15,7 +15,7 @@ Q04 & 3 & 1 & None (Att.~1 Fail) & \texttt{ADMITTED} \\
 Q05 & 4 & 1 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
 Q06 & 5 & 1 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
 Q07 & 6 & 1 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
-Q08 & 7 & 1 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
+Q08 & 7 & 1 & \texttt{NAIVE\_STORED} & \texttt{REINFORCED} (mem-f5e66b70) \\
 Q09 & 8 & 1 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
 Q10 & 9 & 1 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
 Q11 & 10 & 1 & \texttt{NAIVE\_STORED} & \texttt{REJECTED} (Fail) \\
@@ -24,7 +24,7 @@ Q13 & 12 & 2 & \texttt{NAIVE\_STORED} & \texttt{ADMITTED} \\
 Q14 & 13 & 2 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
 Q15 & 13 & 3 & None (Att.~1 Fail) & \texttt{ADMITTED} \\
 Q16 & 14 & 3 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
-Q17 & 15 & 3 & \texttt{NAIVE\_STORED} & \texttt{REINFORCED} (mem-18fc8e84) \\
+Q17 & 15 & 3 & \texttt{NAIVE\_STORED} & \texttt{REINFORCED} (mem-4ff9e3d8) \\
 Q18 & 16 & 3 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
 Q19 & 17 & 3 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
 Q20 & 18 & 3 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
@@ -36,7 +36,7 @@ Q25 & 23 & 3 & \texttt{NAIVE\_STORED} & None (Att.~1 Succ) \\
 \midrule
 \multicolumn{5}{l}{\textbf{Key Governance Invariants:}} \\
 \multicolumn{5}{l}{$\bullet$ Initial Admissions: Q04 (Store=1), Q13 (Store=2), Q15 (Store=3)} \\
-\multicolumn{5}{l}{$\bullet$ Mutual Exclusion Invariant: Q17 reinforces \texttt{mem-18fc8e84}; new admission suppressed} \\
+\multicolumn{5}{l}{$\bullet$ Mutual Exclusion Invariant: Q08 reinforces \texttt{mem-f5e66b70}; Q17 reinforces \texttt{mem-4ff9e3d8}; new admission suppressed} \\
 \multicolumn{5}{l}{$\bullet$ Invariant Store Plateau: Mode 4 store size is invariant at exactly 3 from Q15 to Q25} \\
 \multicolumn{5}{l}{$\bullet$ Mode 3 Unmanaged Accumulation: 23 entries accumulated without lifecycle governance} \\
 \bottomrule
