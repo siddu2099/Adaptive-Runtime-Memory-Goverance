@@ -17,6 +17,7 @@ Bounded retry semantics:
     Termination: status = "FAILED", retry_count = 3 (No fourth repair)
 """
 
+import logging
 import math
 import os
 import time
@@ -50,13 +51,17 @@ from memory.telemetry import RetrievalTelemetryLogger, get_telemetry_logger
 from memory.vector_store import FAISSMemoryStore
 from validation.execution_validator import ExecutionValidator
 
+logger = logging.getLogger(__name__)
+
 load_dotenv()
 
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").rstrip("/")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
 
 
-def default_embed_fn(text: str, base_url: str = OLLAMA_BASE_URL) -> Optional[List[float]]:
+def default_embed_fn(
+    text: str, base_url: str = OLLAMA_BASE_URL, timeout: int = 30
+) -> Optional[List[float]]:
     """Generate 768-dimensional embedding vector via local nomic-embed-text.
     
     Validates:
@@ -69,7 +74,7 @@ def default_embed_fn(text: str, base_url: str = OLLAMA_BASE_URL) -> Optional[Lis
     try:
         endpoint = f"{base_url}/api/embeddings"
         payload = {"model": EMBEDDING_MODEL, "prompt": text}
-        response = requests.post(endpoint, json=payload, timeout=10)
+        response = requests.post(endpoint, json=payload, timeout=timeout)
         response.raise_for_status()
         embedding = response.json().get("embedding")
         if not embedding or len(embedding) != 768:
@@ -82,7 +87,8 @@ def default_embed_fn(text: str, base_url: str = OLLAMA_BASE_URL) -> Optional[Lis
             return None
         v_norm = v / norm
         return v_norm.tolist()
-    except Exception:
+    except Exception as e:
+        logger.warning("default_embed_fn failed (%s): %s: %s", endpoint, type(e).__name__, e)
         return None
 
 

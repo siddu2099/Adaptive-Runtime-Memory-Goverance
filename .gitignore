@@ -23,6 +23,7 @@ htmlcov/
 # Data & Benchmarks
 data/
 benchmark_results/
+scratch/
 
 # IDE & Editor files
 .vscode/

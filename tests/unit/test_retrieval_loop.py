@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional
 import math
 import numpy as np
 import pytest
+import requests
 from unittest.mock import MagicMock, patch
 
 from agents.repair_agent import RepairSQLGenerator
@@ -144,6 +145,12 @@ class TestRuntimeEmbeddingNormalization:
 
         with patch("requests.post", return_value=mock_response):
             result = default_embed_fn("Test 512 dim")
+        assert result is None
+
+    def test_default_embed_fn_handles_timeout_gracefully(self):
+        """Verify default_embed_fn returns None on requests.exceptions.Timeout."""
+        with patch("requests.post", side_effect=requests.exceptions.Timeout("Read timed out")):
+            result = default_embed_fn("Test timeout")
         assert result is None
 
 
@@ -292,6 +299,84 @@ class TestPostRepairAdmission:
         assert admitted_mem.utility == 0.55
         assert admitted_mem.total_uses == 1
         assert admitted_mem.successful_uses == 1
+
+    def test_failed_embedding_reports_embedding_failed(self):
+        """Verify telemetry accurately sets EMBEDDING_FAILED when embedding function returns None."""
+        vstore = FAISSMemoryStore()
+        gov = MemoryGovernanceEngine()
+        failing_embed_fn = lambda text: None
+
+        mock_gen = SQLGenerator()
+        mock_gen.generate = lambda question="", schema_markdown="", **kw: GenerationResult(
+            raw_response="",
+            extracted_sql="SELECT SUM(definitely_nonexistent_column_xyz) FROM fact_sales_performance;",
+        )
+
+        mock_repair = RepairSQLGenerator(
+            generator_fn=lambda p: GenerationResult(
+                raw_response="",
+                extracted_sql="SELECT SUM(net_profit) FROM fact_sales_performance;",
+            )
+        )
+
+        wf = ARMGRepairWorkflow(
+            environment=MockWarehouseEnvironment(),
+            sql_generator=mock_gen,
+            repair_generator=mock_repair,
+            vector_store=vstore,
+            governance_engine=gov,
+            embed_fn=failing_embed_fn,
+        )
+        graph = wf.build_graph()
+
+        res = graph.invoke({
+            "user_query": "Show the total of fact_sales_performance.definitely_nonexistent_column_xyz",
+            "max_retries": 3,
+        })
+
+        assert res["status"] == STATUS_SUCCESS
+        assert res["retry_count"] == 1
+        assert res["telemetry"]["memory_admission"] == "EMBEDDING_FAILED"
+        assert vstore.count() == 0
+
+    def test_low_utility_reports_rejected_below_threshold(self):
+        """Verify telemetry accurately sets REJECTED_BELOW_THRESHOLD when utility is below threshold."""
+        vstore = FAISSMemoryStore()
+        gov = MemoryGovernanceEngine(admission_threshold=0.90)
+        embed_fn = make_deterministic_embed_fn(base_seed=100)
+
+        mock_gen = SQLGenerator()
+        mock_gen.generate = lambda question="", schema_markdown="", **kw: GenerationResult(
+            raw_response="",
+            extracted_sql="SELECT SUM(definitely_nonexistent_column_xyz) FROM fact_sales_performance;",
+        )
+
+        mock_repair = RepairSQLGenerator(
+            generator_fn=lambda p: GenerationResult(
+                raw_response="",
+                extracted_sql="SELECT SUM(net_profit) FROM fact_sales_performance;",
+            )
+        )
+
+        wf = ARMGRepairWorkflow(
+            environment=MockWarehouseEnvironment(),
+            sql_generator=mock_gen,
+            repair_generator=mock_repair,
+            vector_store=vstore,
+            governance_engine=gov,
+            embed_fn=embed_fn,
+        )
+        graph = wf.build_graph()
+
+        res = graph.invoke({
+            "user_query": "Show the total of fact_sales_performance.definitely_nonexistent_column_xyz",
+            "max_retries": 3,
+        })
+
+        assert res["status"] == STATUS_SUCCESS
+        assert res["retry_count"] == 1
+        assert res["telemetry"]["memory_admission"] == "REJECTED_BELOW_THRESHOLD"
+        assert vstore.count() == 0
 
 
 # =====================================================================
