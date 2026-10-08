@@ -840,10 +840,26 @@ def verify_query_level_aggregate_reconciliation(
     }
 
 
-def audit_faiss_telemetry_lineage() -> Dict[str, Any]:
+def audit_faiss_telemetry_lineage(
+    telemetry_path: Optional[Union[str, Path, pd.DataFrame]] = None,
+) -> Dict[str, Any]:
     """Verify end-to-end lineage of FAISS telemetry from raw events to Table A and Figure 3."""
-    telem_path = REPO_ROOT / AUTHORITATIVE_FILES["retrieval_telemetry"]
-    telem_df = pd.read_csv(telem_path)
+    if telemetry_path is None:
+        p = REPO_ROOT / AUTHORITATIVE_FILES["retrieval_telemetry"]
+        if not p.exists():
+            raise FileNotFoundError(f"Telemetry file not found: {p}")
+        telem_df = pd.read_csv(p)
+    elif isinstance(telemetry_path, pd.DataFrame):
+        telem_df = telemetry_path
+    elif isinstance(telemetry_path, (str, Path)):
+        p = Path(telemetry_path)
+        if not p.is_absolute():
+            p = REPO_ROOT / p
+        if not p.exists():
+            raise FileNotFoundError(f"Telemetry file not found: {p}")
+        telem_df = pd.read_csv(p)
+    else:
+        raise TypeError(f"Unsupported telemetry_path type: {type(telemetry_path)}")
 
     total_rows = len(telem_df)
     assert total_rows == 141, f"Expected 141 telemetry rows, got {total_rows}"
@@ -942,16 +958,30 @@ def run_sandboxed_perturbation_test() -> Dict[str, Any]:
             prov_rejection_caught = True
     assert prov_rejection_caught, "Auditor failed to reject corrupted configuration provenance!"
 
+    # 3. Verify retrieval telemetry lineage perturbation sensitivity
+    clean_telem_res = audit_faiss_telemetry_lineage()
+    assert clean_telem_res["status"] == "FAISS_TELEMETRY_LINEAGE_CONFIRMED"
+
+    corrupt_telem_df = pd.read_csv(REPO_ROOT / AUTHORITATIVE_FILES["retrieval_telemetry"]).iloc[:-1].copy()
+    telem_rejection_caught = False
+    try:
+        audit_faiss_telemetry_lineage(telemetry_path=corrupt_telem_df)
+    except AssertionError as e:
+        if "Expected 141 telemetry rows" in str(e):
+            telem_rejection_caught = True
+    assert telem_rejection_caught, "Auditor failed to reject corrupted FAISS telemetry lineage!"
+
     # Verify authoritative files remain untouched
     verify_authoritative_hashes()
 
     return {
         "status": "PERTURBATION_PROPAGATION_VERIFIED",
-        "perturbed_target": "Seed 42, Mode 4, Q01 success -> False; theta 0.25 -> 0.99",
+        "perturbed_target": "Seed 42, Mode 4, Q01 success -> False; theta 0.25 -> 0.99; telemetry rows 141 -> 140",
         "baseline_mode4_exec_succ": base_m4_succ,
         "perturbed_mode4_exec_succ": perturbed_m4_succ,
         "delta_observed": diff_succ,
         "configuration_provenance_rejection_verified": True,
+        "telemetry_lineage_rejection_verified": True,
         "authoritative_files_unmodified": True,
     }
 

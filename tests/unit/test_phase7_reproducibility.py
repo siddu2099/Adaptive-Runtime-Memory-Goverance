@@ -26,6 +26,7 @@ from scripts.analyze_reproducibility import (
     classify_paired_outcome_hierarchical,
     compute_comprehensive_descriptive_stats,
     verify_configuration_provenance,
+    audit_faiss_telemetry_lineage,
 )
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -438,6 +439,10 @@ def test_perturbation_configuration_provenance_rejection(tmp_path):
 def test_faiss_telemetry_lineage():
     """Verify retrieval telemetry line count, candidates, and threshold filtering."""
     assert TELEMETRY_CSV.exists(), f"Missing {TELEMETRY_CSV}"
+    audit_res = audit_faiss_telemetry_lineage(TELEMETRY_CSV)
+    assert audit_res["status"] == "FAISS_TELEMETRY_LINEAGE_CONFIRMED"
+    assert audit_res["telemetry_rows"] == 141
+
     df_tel = pd.read_csv(TELEMETRY_CSV)
     
     # Total rows: 141 (47 per seed)
@@ -455,6 +460,37 @@ def test_faiss_telemetry_lineage():
     # Across all 3 seeds: 16 * 3 = 48 candidates meet similarity >= 0.50
     retrievals = valid_cands[valid_cands["similarity"] >= 0.50]
     assert len(retrievals) == 48
+
+
+def test_perturbation_faiss_telemetry_lineage_rejection(tmp_path):
+    """Verify that missing or corrupted retrieval telemetry is rejected by audit_faiss_telemetry_lineage."""
+    assert TELEMETRY_CSV.exists(), f"Missing {TELEMETRY_CSV}"
+
+    # 1. Baseline: Authoritative telemetry passes
+    base_res = audit_faiss_telemetry_lineage(TELEMETRY_CSV)
+    assert base_res["status"] == "FAISS_TELEMETRY_LINEAGE_CONFIRMED"
+    assert base_res["telemetry_rows"] == 141
+
+    # 2. Perturbation Case A: Missing telemetry artifact
+    missing_file = tmp_path / "missing_retrieval_telemetry.csv"
+    with pytest.raises(FileNotFoundError, match="Telemetry file not found"):
+        audit_faiss_telemetry_lineage(missing_file)
+
+    # 3. Perturbation Case B: Malformed / corrupted telemetry row count (140 rows instead of 141)
+    df_corrupt = pd.read_csv(TELEMETRY_CSV).iloc[:-1].copy()
+    temp_corrupt_file = tmp_path / "corrupted_retrieval_telemetry.csv"
+    df_corrupt.to_csv(temp_corrupt_file, index=False)
+
+    with pytest.raises(AssertionError, match="Expected 141 telemetry rows"):
+        audit_faiss_telemetry_lineage(temp_corrupt_file)
+
+    with pytest.raises(AssertionError, match="Expected 141 telemetry rows"):
+        audit_faiss_telemetry_lineage(df_corrupt)
+
+    # 4. Restoration: Authoritative telemetry remains untouched
+    post_res = audit_faiss_telemetry_lineage(TELEMETRY_CSV)
+    assert post_res["status"] == "FAISS_TELEMETRY_LINEAGE_CONFIRMED"
+    assert not (BENCHMARK_DIR / "corrupted_retrieval_telemetry.csv").exists()
 
 
 def test_examiner_summary_query_level_and_pair_level_consistency():
