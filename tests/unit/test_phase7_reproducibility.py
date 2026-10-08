@@ -15,6 +15,7 @@ Hermetic test suite validating:
 - FAISS telemetry lineage consistency
 """
 
+import copy
 import json
 from pathlib import Path
 import numpy as np
@@ -24,6 +25,7 @@ import pytest
 from scripts.analyze_reproducibility import (
     classify_paired_outcome_hierarchical,
     compute_comprehensive_descriptive_stats,
+    verify_configuration_provenance,
 )
 
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -374,9 +376,14 @@ def test_metric_lineage_matrix_structure():
 def test_configuration_provenance_completeness():
     """Verify configuration_provenance.json has all required parameters."""
     assert PROVENANCE_JSON.exists(), f"Missing {PROVENANCE_JSON}"
+    res = verify_configuration_provenance(PROVENANCE_JSON)
+    assert res["status"] == "CONFIGURATION_PROVENANCE_VERIFIED"
+    assert res["admission_threshold_theta"] == 0.25
+    assert res["retrieval_similarity_threshold_tau"] == 0.50
+
     with open(PROVENANCE_JSON, "r", encoding="utf-8") as f:
         config = json.load(f)
-        
+
     assert config["metadata"]["git_commit"] == "40d36a3980e5f152a8eadbfa021b833f587d7b3b"
     assert "3.13" in config["system_environment"]["python_version"] or "3.10" in config["system_environment"]["python_version"]
     assert "PostgreSQL 18.1" in config["database_engine"]["version"]
@@ -384,17 +391,48 @@ def test_configuration_provenance_completeness():
     assert config["neural_inference_stack"]["embedding_model"] == "nomic-embed-text"
     assert config["neural_inference_stack"]["generation_temperature"] == 0.0
     assert config["neural_inference_stack"]["embedding_dimension"] == 768
-    
+
     gov = config["armg_governance_configuration"]
     assert gov["admission_threshold_theta"] == 0.25
     assert gov["retrieval_similarity_threshold_tau"] == 0.50
     assert gov["max_repair_retries"] == 3
     assert gov["temporal_decay_rate_lambda"] == 0.05
-    
+
     exp = config["experimental_design"]
     assert exp["benchmark_seeds"] == [42, 123, 999]
     assert exp["unique_queries_count"] == 25
     assert exp["total_evaluations"] == 450
+
+
+def test_perturbation_configuration_provenance_rejection(tmp_path):
+    """Verify that corrupting configuration provenance is rejected by the genuine validator."""
+    assert PROVENANCE_JSON.exists(), f"Missing {PROVENANCE_JSON}"
+    with open(PROVENANCE_JSON, "r", encoding="utf-8") as f:
+        clean_config = json.load(f)
+
+    # 1. Baseline: Authoritative provenance passes
+    baseline_res = verify_configuration_provenance(PROVENANCE_JSON)
+    assert baseline_res["status"] == "CONFIGURATION_PROVENANCE_VERIFIED"
+
+    # 2. Perturbation: In an isolated temporary artifact, alter admission_threshold_theta 0.25 -> 0.99
+    corrupt_config = copy.deepcopy(clean_config)
+    corrupt_config["armg_governance_configuration"]["admission_threshold_theta"] = 0.99
+
+    temp_corrupt_file = tmp_path / "configuration_provenance_corrupted.json"
+    with open(temp_corrupt_file, "w", encoding="utf-8") as f:
+        json.dump(corrupt_config, f, indent=2)
+
+    # 3. Expected validation failure via real validator
+    with pytest.raises(ValueError, match="Admission threshold theta mismatch.*expected 0.25"):
+        verify_configuration_provenance(temp_corrupt_file)
+
+    with pytest.raises(ValueError, match="Admission threshold theta mismatch.*expected 0.25"):
+        verify_configuration_provenance(corrupt_config)
+
+    # 4. Restoration: Verify temporary file is separate and authoritative remains intact
+    assert not (BENCHMARK_DIR / "configuration_provenance_corrupted.json").exists()
+    restored_res = verify_configuration_provenance(PROVENANCE_JSON)
+    assert restored_res["status"] == "CONFIGURATION_PROVENANCE_VERIFIED"
 
 
 def test_faiss_telemetry_lineage():

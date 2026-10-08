@@ -20,6 +20,7 @@ import os
 import sys
 import json
 import csv
+import copy
 import hashlib
 import subprocess
 from pathlib import Path
@@ -67,9 +68,10 @@ def compute_sha256(filepath: Union[str, Path]) -> str:
     return hashlib.sha256(p.read_bytes()).hexdigest()
 
 
-def verify_authoritative_hashes() -> bool:
+def verify_authoritative_hashes(expected_hashes: Optional[Dict[str, str]] = None) -> bool:
     """Verify SHA-256 hashes of all authoritative benchmark files against established baseline."""
-    for rel_path, expected_hash in BASELINE_HASHES.items():
+    hashes_to_check = expected_hashes if expected_hashes is not None else BASELINE_HASHES
+    for rel_path, expected_hash in hashes_to_check.items():
         actual_hash = compute_sha256(rel_path)
         if actual_hash != expected_hash:
             raise ValueError(
@@ -78,14 +80,20 @@ def verify_authoritative_hashes() -> bool:
     return True
 
 
-def verify_root_dataset_equivalence() -> Dict[str, Any]:
+def verify_root_dataset_equivalence(
+    root_df: Optional[pd.DataFrame] = None,
+    seed_dfs: Optional[List[pd.DataFrame]] = None,
+) -> Dict[str, Any]:
     """Verify exact cell-level equivalence of root CSV to concat(seed42, seed123, seed999)."""
-    root_df = pd.read_csv(REPO_ROOT / AUTHORITATIVE_FILES["root_benchmark"])
-    s42 = pd.read_csv(REPO_ROOT / AUTHORITATIVE_FILES["seed42"])
-    s123 = pd.read_csv(REPO_ROOT / AUTHORITATIVE_FILES["seed123"])
-    s999 = pd.read_csv(REPO_ROOT / AUTHORITATIVE_FILES["seed999"])
+    if root_df is None:
+        root_df = pd.read_csv(REPO_ROOT / AUTHORITATIVE_FILES["root_benchmark"])
+    if seed_dfs is None:
+        s42 = pd.read_csv(REPO_ROOT / AUTHORITATIVE_FILES["seed42"])
+        s123 = pd.read_csv(REPO_ROOT / AUTHORITATIVE_FILES["seed123"])
+        s999 = pd.read_csv(REPO_ROOT / AUTHORITATIVE_FILES["seed999"])
+        seed_dfs = [s42, s123, s999]
 
-    concat_df = pd.concat([s42, s123, s999], ignore_index=True)
+    concat_df = pd.concat(seed_dfs, ignore_index=True)
 
     if root_df.shape != concat_df.shape:
         raise ValueError(f"Shape mismatch: root {root_df.shape} vs concat {concat_df.shape}")
@@ -219,6 +227,84 @@ def build_configuration_provenance() -> Dict[str, Any]:
         json.dump(config_provenance, f, indent=2)
 
     return config_provenance
+
+
+def verify_configuration_provenance(
+    provenance_data: Optional[Union[Dict[str, Any], Path, str]] = None,
+) -> Dict[str, Any]:
+    """Verify configuration provenance invariants against authoritative benchmark parameters."""
+    if provenance_data is None:
+        p = REPO_ROOT / "benchmark" / "configuration_provenance.json"
+        if not p.exists():
+            raise FileNotFoundError(f"Configuration provenance file not found: {p}")
+        with open(p, "r", encoding="utf-8") as f:
+            config = json.load(f)
+    elif isinstance(provenance_data, (str, Path)):
+        p = Path(provenance_data)
+        if not p.is_absolute():
+            p = REPO_ROOT / p
+        if not p.exists():
+            raise FileNotFoundError(f"Configuration provenance file not found: {p}")
+        with open(p, "r", encoding="utf-8") as f:
+            config = json.load(f)
+    elif isinstance(provenance_data, dict):
+        config = provenance_data
+    else:
+        raise TypeError(f"Unsupported provenance_data type: {type(provenance_data)}")
+
+    # 1. Metadata invariants
+    meta = config.get("metadata", {})
+    if meta.get("git_commit") != "40d36a3980e5f152a8eadbfa021b833f587d7b3b":
+        raise ValueError(f"Git commit mismatch in provenance: {meta.get('git_commit')}")
+
+    # 2. System & Database invariants
+    sys_env = config.get("system_environment", {})
+    py_ver = sys_env.get("python_version", "")
+    if "3.13" not in py_ver and "3.10" not in py_ver:
+        raise ValueError(f"Unsupported python version in provenance: {py_ver}")
+
+    db_ver = config.get("database_engine", {}).get("version", "")
+    if "PostgreSQL 18.1" not in db_ver:
+        raise ValueError(f"Database version mismatch in provenance: {db_ver}")
+
+    # 3. Neural stack invariants
+    neural = config.get("neural_inference_stack", {})
+    if neural.get("generation_model") != "qwen2.5:7b-instruct":
+        raise ValueError(f"Generation model mismatch: {neural.get('generation_model')}")
+    if neural.get("embedding_model") != "nomic-embed-text":
+        raise ValueError(f"Embedding model mismatch: {neural.get('embedding_model')}")
+    if neural.get("generation_temperature") != 0.0:
+        raise ValueError(f"Generation temperature mismatch: {neural.get('generation_temperature')}")
+    if neural.get("embedding_dimension") != 768:
+        raise ValueError(f"Embedding dimension mismatch: {neural.get('embedding_dimension')}")
+
+    # 4. Governance configuration invariants
+    gov = config.get("armg_governance_configuration", {})
+    if gov.get("admission_threshold_theta") != 0.25:
+        raise ValueError(f"Admission threshold theta mismatch: {gov.get('admission_threshold_theta')} (expected 0.25)")
+    if gov.get("retrieval_similarity_threshold_tau") != 0.50:
+        raise ValueError(f"Retrieval similarity threshold tau mismatch: {gov.get('retrieval_similarity_threshold_tau')} (expected 0.50)")
+    if gov.get("max_repair_retries") != 3:
+        raise ValueError(f"Max repair retries mismatch: {gov.get('max_repair_retries')} (expected 3)")
+    if gov.get("temporal_decay_rate_lambda") != 0.05:
+        raise ValueError(f"Temporal decay rate lambda mismatch: {gov.get('temporal_decay_rate_lambda')} (expected 0.05)")
+
+    # 5. Experimental design invariants
+    exp = config.get("experimental_design", {})
+    if exp.get("benchmark_seeds") != [42, 123, 999]:
+        raise ValueError(f"Benchmark seeds mismatch: {exp.get('benchmark_seeds')}")
+    if exp.get("unique_queries_count") != 25:
+        raise ValueError(f"Unique queries count mismatch: {exp.get('unique_queries_count')}")
+    if exp.get("total_evaluations") != 450:
+        raise ValueError(f"Total evaluations mismatch: {exp.get('total_evaluations')}")
+
+    return {
+        "status": "CONFIGURATION_PROVENANCE_VERIFIED",
+        "git_commit": meta.get("git_commit"),
+        "generation_model": neural.get("generation_model"),
+        "admission_threshold_theta": gov.get("admission_threshold_theta"),
+        "retrieval_similarity_threshold_tau": gov.get("retrieval_similarity_threshold_tau"),
+    }
 
 
 def build_canonical_metric_lineage() -> Dict[str, Any]:
@@ -837,15 +923,35 @@ def run_sandboxed_perturbation_test() -> Dict[str, Any]:
     diff_succ = base_m4_succ - perturbed_m4_succ
     assert diff_succ > 0.5, f"Perturbation did not propagate to aggregate metric! Diff: {diff_succ}"
 
+    # Verify configuration provenance perturbation sensitivity
+    # 1. Clean authoritative provenance passes
+    clean_prov_res = verify_configuration_provenance()
+    assert clean_prov_res["status"] == "CONFIGURATION_PROVENANCE_VERIFIED"
+
+    # 2. Perturbed copy (admission_threshold_theta: 0.25 -> 0.99) is rejected by genuine validator
+    prov_path = REPO_ROOT / "benchmark" / "configuration_provenance.json"
+    with open(prov_path, "r", encoding="utf-8") as f:
+        corrupt_prov = json.load(f)
+    corrupt_prov["armg_governance_configuration"]["admission_threshold_theta"] = 0.99
+
+    prov_rejection_caught = False
+    try:
+        verify_configuration_provenance(corrupt_prov)
+    except ValueError as e:
+        if "Admission threshold theta mismatch" in str(e):
+            prov_rejection_caught = True
+    assert prov_rejection_caught, "Auditor failed to reject corrupted configuration provenance!"
+
     # Verify authoritative files remain untouched
     verify_authoritative_hashes()
 
     return {
         "status": "PERTURBATION_PROPAGATION_VERIFIED",
-        "perturbed_target": "Seed 42, Mode 4, Q01 success -> False",
+        "perturbed_target": "Seed 42, Mode 4, Q01 success -> False; theta 0.25 -> 0.99",
         "baseline_mode4_exec_succ": base_m4_succ,
         "perturbed_mode4_exec_succ": perturbed_m4_succ,
         "delta_observed": diff_succ,
+        "configuration_provenance_rejection_verified": True,
         "authoritative_files_unmodified": True,
     }
 
@@ -864,9 +970,11 @@ def execute_phase7_analysis() -> Dict[str, Any]:
     print(f"  Root vs Concat Equivalence: {equiv_res['status']}")
     print(f"  Evaluations: {equiv_res['row_count']} rows across {equiv_res['column_count']} columns")
 
-    print("\n[Step 3] Building Configuration Provenance...")
+    print("\n[Step 3] Building & Verifying Configuration Provenance...")
     provenance = build_configuration_provenance()
+    prov_verif = verify_configuration_provenance(provenance)
     print(f"  Configuration Provenance Saved: benchmark/configuration_provenance.json")
+    print(f"  Configuration Provenance Verified: {prov_verif['status']}")
     print(f"  Git Commit: {provenance['metadata']['git_commit'][:12]}")
     print(f"  LLM: {provenance['neural_inference_stack']['generation_model']} (Temp={provenance['neural_inference_stack']['generation_temperature']})")
 
