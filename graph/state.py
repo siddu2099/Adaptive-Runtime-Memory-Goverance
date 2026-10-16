@@ -34,6 +34,7 @@ CONTROLLED_STATUSES = {
 class ARMGState(TypedDict, total=False):
     """Execution state tracked across the LangGraph repair graph."""
     user_query: str
+    initial_sql_override: Optional[str]
     schema_context: Dict[str, Any]
     pruned_schema_markdown: str
     generated_sql: Optional[str]
@@ -55,4 +56,10 @@ class ARMGState(TypedDict, total=False):
     retry_count: int
     max_retries: int
     status: str
+    decision_source: Optional[str]
+    intent_decision: Optional[str]
+    block_reason: Optional[str]
+    explicit_constraints: Optional[Any]
+    is_constraint_violation: bool
+    violated_constraint: Optional[str]
     telemetry: Dict[str, Any]

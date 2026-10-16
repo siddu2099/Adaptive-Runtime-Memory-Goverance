@@ -49,7 +49,9 @@ from memory.knowledge_extractor import RuntimeKnowledgeExtractor
 from memory.models import RuntimeKnowledge, RuntimeMemory
 from memory.telemetry import RetrievalTelemetryLogger, get_telemetry_logger
 from memory.vector_store import FAISSMemoryStore
+from validation.constraint_validator import ConstraintValidator, ExplicitConstraints
 from validation.execution_validator import ExecutionValidator
+from validation.intent_classifier import IntentClassifier, IntentDecision
 
 logger = logging.getLogger(__name__)
 
@@ -110,6 +112,8 @@ class ARMGRepairWorkflow:
         vector_store: Optional[FAISSMemoryStore] = None,
         embed_fn: Optional[Callable[[str], Optional[List[float]]]] = None,
         telemetry_logger: Optional[RetrievalTelemetryLogger] = None,
+        intent_classifier: Optional[IntentClassifier] = None,
+        constraint_validator: Optional[ConstraintValidator] = None,
     ):
         self.environment = environment
         self.introspector = introspector or SchemaIntrospector(environment)
@@ -124,6 +128,8 @@ class ARMGRepairWorkflow:
         self.vector_store = vector_store or FAISSMemoryStore()
         self.embed_fn = embed_fn or default_embed_fn
         self.telemetry_logger = telemetry_logger
+        self.intent_classifier = intent_classifier or IntentClassifier()
+        self.constraint_validator = constraint_validator or ConstraintValidator()
 
     # =========================================================================
     # Nodes (Section 12)
@@ -135,25 +141,124 @@ class ARMGRepairWorkflow:
         if not schema_context:
             schema_context = self.environment.inspect()
 
+        # Extract explicit constraints from natural language query
+        constraints = state.get("explicit_constraints")
+        if not constraints:
+            constraints = self.constraint_validator.extract_constraints(state["user_query"])
+
         pruned_tables = self.pruner.prune(state["user_query"])
         pruned_markdown = self.introspector.get_schema_markdown(filter_tables=pruned_tables)
 
         telemetry = dict(state.get("telemetry", {}))
+        telemetry.setdefault("intent_gate_evaluations", 0)
+        telemetry.setdefault("intent_gate_duration_ms", 0.0)
         telemetry.setdefault("generation_latency_ms", 0.0)
         telemetry.setdefault("validation_latency_ms", 0.0)
         telemetry.setdefault("execution_latency_ms", 0.0)
+        telemetry.setdefault("prompt_tokens", 0)
+        telemetry.setdefault("completion_tokens", 0)
         telemetry.setdefault("total_tokens", 0)
+        telemetry.setdefault("token_metadata_complete", True)
         telemetry.setdefault("repair_count", 0)
         telemetry.setdefault("generation_attempts", 0)
+        telemetry.setdefault("sql_execution_attempts", 0)
+        telemetry.setdefault("sql_candidate_evaluations", 0)
+        telemetry.setdefault("postgres_executor_calls", 0)
+        telemetry.setdefault("ollama_generation_attempts", 0)
+        telemetry["has_explicit_constraints"] = constraints.has_constraints()
+        if constraints.has_constraints():
+            telemetry["explicit_constraints"] = constraints.to_dict()
 
         return {
             "schema_context": schema_context,
             "pruned_schema_markdown": pruned_markdown,
+            "explicit_constraints": constraints,
             "status": STATUS_RUNNING,
             "telemetry": telemetry,
             "retry_count": state.get("retry_count", 0),
             "max_retries": state.get("max_retries", 3),
         }
+
+    def intent_gate_node(self, state: ARMGState) -> Dict[str, Any]:
+        """Node 1: Deterministic Natural-Language Intent Safety Gate.
+
+        Executes immediately at graph entry before schema introspection, memory retrieval,
+        or SQL candidate generation. Classifies explicit destructive requests (DROP, TRUNCATE,
+        DELETE, destructive ALTER) and halts execution before any database connection.
+        """
+        user_query = state.get("user_query", "")
+        telemetry = dict(state.get("telemetry", {}))
+        telemetry.setdefault("intent_gate_evaluations", 0)
+        telemetry.setdefault("intent_gate_duration_ms", 0.0)
+        telemetry.setdefault("generation_latency_ms", 0.0)
+        telemetry.setdefault("validation_latency_ms", 0.0)
+        telemetry.setdefault("execution_latency_ms", 0.0)
+        telemetry.setdefault("prompt_tokens", 0)
+        telemetry.setdefault("completion_tokens", 0)
+        telemetry.setdefault("total_tokens", 0)
+        telemetry.setdefault("token_metadata_complete", True)
+        telemetry.setdefault("repair_count", 0)
+        telemetry.setdefault("generation_attempts", 0)
+        telemetry.setdefault("sql_execution_attempts", 0)
+        telemetry.setdefault("sql_candidate_evaluations", 0)
+        telemetry.setdefault("postgres_executor_calls", 0)
+        telemetry.setdefault("ollama_generation_attempts", 0)
+
+        start_time = time.perf_counter()
+        result = self.intent_classifier.classify(user_query)
+        duration_ms = (time.perf_counter() - start_time) * 1000.0
+
+        telemetry["intent_gate_evaluations"] = telemetry.get("intent_gate_evaluations", 0) + 1
+        telemetry["intent_gate_duration_ms"] = round(
+            telemetry.get("intent_gate_duration_ms", 0.0) + duration_ms, 3
+        )
+        telemetry["intent_decision"] = result.decision.value
+
+        retry_count = state.get("retry_count", 0)
+        max_retries = state.get("max_retries", 3)
+
+        if result.decision == IntentDecision.BLOCK:
+            status = STATUS_BLOCKED
+            decision_source = "natural_language_intent_gate"
+            block_reason = "DESTRUCTIVE_INTENT_DETECTED"
+            telemetry["decision_source"] = decision_source
+            telemetry["block_reason"] = block_reason
+            telemetry["terminal_reason"] = block_reason
+            return {
+                "status": status,
+                "intent_decision": result.decision.value,
+                "decision_source": decision_source,
+                "block_reason": block_reason,
+                "safety_category": "destructive_intent",
+                "retry_count": retry_count,
+                "max_retries": max_retries,
+                "telemetry": telemetry,
+            }
+        elif result.decision == IntentDecision.AMBIGUOUS:
+            status = STATUS_BLOCKED
+            decision_source = "natural_language_intent_gate"
+            block_reason = "AMBIGUOUS_INTENT_CLARIFICATION_REQUIRED"
+            telemetry["decision_source"] = decision_source
+            telemetry["block_reason"] = block_reason
+            telemetry["terminal_reason"] = block_reason
+            return {
+                "status": status,
+                "intent_decision": result.decision.value,
+                "decision_source": decision_source,
+                "block_reason": block_reason,
+                "safety_category": "ambiguous_intent",
+                "retry_count": retry_count,
+                "max_retries": max_retries,
+                "telemetry": telemetry,
+            }
+        else:
+            return {
+                "status": STATUS_RUNNING,
+                "intent_decision": result.decision.value,
+                "retry_count": retry_count,
+                "max_retries": max_retries,
+                "telemetry": telemetry,
+            }
 
     def memory_retrieval_node(self, state: ARMGState) -> Dict[str, Any]:
         """Node 2: Retrieve relevant governed memories from FAISS vector store with full telemetry."""
@@ -201,10 +306,21 @@ class ARMGRepairWorkflow:
             else:
                 # Section 4: Capture ALL candidates returned by FAISS index.search() before threshold and governance filtering
                 raw_matches = self.vector_store.search_raw_candidates(query_vec, top_k=top_k)
+                constraints = state.get("explicit_constraints")
                 for mem, rank, d2, sim in raw_matches:
                     passed_thresh = bool(sim >= threshold)
                     is_active = mem.status.value not in ("ARCHIVED", "DELETED")
-                    if passed_thresh and is_active:
+
+                    # Verify candidate memory does not contradict explicit query constraints
+                    is_compatible = True
+                    if constraints and hasattr(constraints, "has_constraints") and constraints.has_constraints():
+                        if not getattr(constraints, "allow_table_substitution", True) and "relation" in mem.repair_strategy.lower():
+                            is_compatible = False
+                        for p in getattr(constraints, "prohibited_tables", []):
+                            if p.lower() in mem.repair_strategy.lower() or any(p.lower() == c.lower() for c in mem.candidate_replacements):
+                                is_compatible = False
+
+                    if passed_thresh and is_active and is_compatible:
                         retrieved.append(mem)
 
                     raw_candidates_telemetry.append({
@@ -238,12 +354,18 @@ class ARMGRepairWorkflow:
     def sql_generator_node(self, state: ARMGState) -> Dict[str, Any]:
         """Node 3: Generate initial SQL query or replacement repair query."""
         telemetry = dict(state.get("telemetry", {}))
-        telemetry["generation_attempts"] = telemetry.get("generation_attempts", 0) + 1
 
         repair_prompt = state.get("repair_prompt")
+        initial_override = state.get("initial_sql_override")
         prev_exec_err = None
+
         if repair_prompt:
-            # Repair attempt
+            # Repair attempt via Ollama
+            telemetry["generation_attempts"] = telemetry.get("generation_attempts", 0) + 1
+            telemetry["ollama_generation_attempts"] = telemetry.get("ollama_generation_attempts", 0) + 1
+            telemetry["sql_execution_attempts"] = telemetry.get("sql_execution_attempts", 0) + 1
+            telemetry["sql_candidate_evaluations"] = telemetry.get("sql_candidate_evaluations", 0) + 1
+
             prev_sql = state.get("generated_sql")
             if state.get("execution_result") and not state["execution_result"].is_success:
                 prev_exec_err = state["execution_result"].error
@@ -251,23 +373,140 @@ class ARMGRepairWorkflow:
             elif state.get("validation_error"):
                 prev_exec_err = state["validation_error"]
                 telemetry["previous_execution_error"] = prev_exec_err
+
             gen_result = self.repair_generator.generate_repair(repair_prompt)
-        else:
-            # Initial generation attempt
+            is_manual = False
+
+            telemetry["generation_latency_ms"] = round(
+                telemetry.get("generation_latency_ms", 0.0) + gen_result.generation_duration_ms, 3
+            )
+
+            metadata_complete = telemetry.get("token_metadata_complete", True)
+
+            # Accumulate prompt tokens across attempts exactly once per attempt
+            if gen_result.prompt_tokens is None:
+                telemetry["prompt_tokens"] = None
+                metadata_complete = False
+            elif telemetry.get("prompt_tokens") is None and not metadata_complete:
+                telemetry["prompt_tokens"] = None
+            else:
+                prev_prompt = 0 if telemetry.get("prompt_tokens") is None else telemetry["prompt_tokens"]
+                telemetry["prompt_tokens"] = prev_prompt + gen_result.prompt_tokens
+
+            # Accumulate completion tokens across attempts exactly once per attempt
+            if gen_result.completion_tokens is None:
+                telemetry["completion_tokens"] = None
+                metadata_complete = False
+            elif telemetry.get("completion_tokens") is None and not metadata_complete:
+                telemetry["completion_tokens"] = None
+            else:
+                prev_comp = 0 if telemetry.get("completion_tokens") is None else telemetry["completion_tokens"]
+                telemetry["completion_tokens"] = prev_comp + gen_result.completion_tokens
+
+            telemetry["token_metadata_complete"] = metadata_complete
+
+            # Calculate total tokens strictly when both accumulated counts are available
+            if telemetry.get("prompt_tokens") is not None and telemetry.get("completion_tokens") is not None:
+                telemetry["total_tokens"] = telemetry["prompt_tokens"] + telemetry["completion_tokens"]
+            else:
+                telemetry["total_tokens"] = None
+
+            extracted_sql = gen_result.extracted_sql
+            prompt_tokens = gen_result.prompt_tokens
+            completion_tokens = gen_result.completion_tokens
+            gen_duration_ms = gen_result.generation_duration_ms
+
+        elif initial_override and initial_override.strip():
+            # Manual Initial SQL Override — bypass initial Ollama generation
+            telemetry["sql_execution_attempts"] = telemetry.get("sql_execution_attempts", 0) + 1
+            telemetry["sql_candidate_evaluations"] = telemetry.get("sql_candidate_evaluations", 0) + 1
+            telemetry.setdefault("ollama_generation_attempts", 0)
+            telemetry.setdefault("generation_attempts", 0)
+            telemetry.setdefault("postgres_executor_calls", 0)
+            # A manually supplied initial SQL statement is not an Ollama generation.
+            # Do not count it as one or attach fabricated generation tokens to it.
+            telemetry["prompt_tokens"] = None
+            telemetry["completion_tokens"] = None
+            telemetry["total_tokens"] = None
             prev_sql = None
+            is_manual = True
+
+            extracted_sql = initial_override.strip()
+            prompt_tokens = None
+            completion_tokens = None
+            gen_duration_ms = 0.0
+
+        else:
+            # Ordinary initial generation attempt via Ollama
+            telemetry["generation_attempts"] = telemetry.get("generation_attempts", 0) + 1
+            telemetry["ollama_generation_attempts"] = telemetry.get("ollama_generation_attempts", 0) + 1
+            telemetry["sql_execution_attempts"] = telemetry.get("sql_execution_attempts", 0) + 1
+            telemetry["sql_candidate_evaluations"] = telemetry.get("sql_candidate_evaluations", 0) + 1
+
+            prev_sql = None
+            is_manual = False
+
             gen_result = self.sql_generator.generate(
                 question=state["user_query"],
                 schema_markdown=state["pruned_schema_markdown"],
             )
 
-        telemetry["generation_latency_ms"] = round(
-            telemetry.get("generation_latency_ms", 0.0) + gen_result.generation_duration_ms, 3
-        )
-        tokens = (gen_result.prompt_tokens or 0) + (gen_result.completion_tokens or 0)
-        telemetry["total_tokens"] = telemetry.get("total_tokens", 0) + tokens
+            telemetry["generation_latency_ms"] = round(
+                telemetry.get("generation_latency_ms", 0.0) + gen_result.generation_duration_ms, 3
+            )
+
+            metadata_complete = telemetry.get("token_metadata_complete", True)
+
+            # Accumulate prompt tokens across attempts exactly once per attempt
+            if gen_result.prompt_tokens is None:
+                telemetry["prompt_tokens"] = None
+                metadata_complete = False
+            elif telemetry.get("prompt_tokens") is None and not metadata_complete:
+                telemetry["prompt_tokens"] = None
+            else:
+                prev_prompt = 0 if telemetry.get("prompt_tokens") is None else telemetry["prompt_tokens"]
+                telemetry["prompt_tokens"] = prev_prompt + gen_result.prompt_tokens
+
+            # Accumulate completion tokens across attempts exactly once per attempt
+            if gen_result.completion_tokens is None:
+                telemetry["completion_tokens"] = None
+                metadata_complete = False
+            elif telemetry.get("completion_tokens") is None and not metadata_complete:
+                telemetry["completion_tokens"] = None
+            else:
+                prev_comp = 0 if telemetry.get("completion_tokens") is None else telemetry["completion_tokens"]
+                telemetry["completion_tokens"] = prev_comp + gen_result.completion_tokens
+
+            telemetry["token_metadata_complete"] = metadata_complete
+
+            # Calculate total tokens strictly when both accumulated counts are available
+            if telemetry.get("prompt_tokens") is not None and telemetry.get("completion_tokens") is not None:
+                telemetry["total_tokens"] = telemetry["prompt_tokens"] + telemetry["completion_tokens"]
+            else:
+                telemetry["total_tokens"] = None
+
+            extracted_sql = gen_result.extracted_sql
+            prompt_tokens = gen_result.prompt_tokens
+            completion_tokens = gen_result.completion_tokens
+            gen_duration_ms = gen_result.generation_duration_ms
+
+        # Record attempt entry in attempts_trace
+        attempts_trace = list(telemetry.get("attempts_trace", []))
+        attempts_trace.append({
+            "attempt": telemetry["sql_execution_attempts"],
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "sql": extracted_sql,
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "generation_duration_ms": gen_duration_ms,
+            "is_repair": bool(repair_prompt),
+            "is_manual_override": is_manual,
+            "repair_prompt_used": repair_prompt,
+        })
+        telemetry["attempts_trace"] = attempts_trace
 
         return {
-            "generated_sql": gen_result.extracted_sql,
+            "generated_sql": extracted_sql,
             "previous_sql": prev_sql,
             "previous_execution_error": prev_exec_err,
             "repair_prompt": None,
@@ -277,7 +516,7 @@ class ARMGRepairWorkflow:
         }
 
     def ast_guard_node(self, state: ARMGState) -> Dict[str, Any]:
-        """Node 4: Validate generated SQL via SQLGlot AST guardrail."""
+        """Node 4: Validate generated SQL via SQLGlot AST guardrail and explicit user constraints."""
         sql = state.get("generated_sql", "")
         start_time = time.perf_counter()
         is_valid, error_reason = self.validator.validate(sql)
@@ -293,11 +532,40 @@ class ARMGRepairWorkflow:
         if not is_valid:
             is_safety, safety_cat = self.validator.classify_safety_violation(sql)
 
+        is_constraint_violation = False
+        violated_constraint = None
+        if is_valid:
+            constraints = state.get("explicit_constraints")
+            is_repair = bool(state.get("repair_prompt") or state.get("retry_count", 0) > 0)
+            is_const_valid, const_err = self.constraint_validator.validate_sql(
+                sql=sql,
+                constraints=constraints,
+                is_repair=is_repair,
+            )
+            if not is_const_valid:
+                is_valid = False
+                error_reason = f"EXPLICIT_CONSTRAINT_VIOLATION: {const_err}"
+                is_constraint_violation = True
+                violated_constraint = const_err
+
+        attempts_trace = list(telemetry.get("attempts_trace", []))
+        if attempts_trace:
+            attempts_trace[-1]["ast_valid"] = is_valid
+            attempts_trace[-1]["ast_error"] = error_reason if not is_valid else None
+            attempts_trace[-1]["is_safety_violation"] = is_safety
+            attempts_trace[-1]["safety_category"] = safety_cat
+            attempts_trace[-1]["is_constraint_violation"] = is_constraint_violation
+            attempts_trace[-1]["violated_constraint"] = violated_constraint
+            attempts_trace[-1]["validation_duration_ms"] = round(duration_ms, 3)
+            telemetry["attempts_trace"] = attempts_trace
+
         return {
             "validation_passed": is_valid,
             "validation_error": error_reason if not is_valid else None,
             "is_safety_violation": is_safety,
             "safety_category": safety_cat,
+            "is_constraint_violation": is_constraint_violation,
+            "violated_constraint": violated_constraint,
             "telemetry": telemetry,
         }
 
@@ -307,9 +575,19 @@ class ARMGRepairWorkflow:
         exec_res = self.environment.execute(sql)
 
         telemetry = dict(state.get("telemetry", {}))
+        telemetry["postgres_executor_calls"] = telemetry.get("postgres_executor_calls", 0) + 1
         telemetry["execution_latency_ms"] = round(
             telemetry.get("execution_latency_ms", 0.0) + exec_res.execution_time_ms, 3
         )
+
+        attempts_trace = list(telemetry.get("attempts_trace", []))
+        if attempts_trace:
+            attempts_trace[-1]["executed_in_db"] = True
+            attempts_trace[-1]["exec_success"] = exec_res.is_success
+            attempts_trace[-1]["exec_error"] = exec_res.error
+            attempts_trace[-1]["exec_time_ms"] = exec_res.execution_time_ms
+            attempts_trace[-1]["row_count"] = exec_res.row_count
+            telemetry["attempts_trace"] = attempts_trace
 
         return {
             "execution_result": exec_res,
@@ -329,15 +607,58 @@ class ARMGRepairWorkflow:
                 validation_error=state.get("validation_error") or "SQLGlot validation failed",
                 schema_context=table_names,
             )
-            # Deterministic check: explicit safety violations terminate immediately as STATUS_BLOCKED
-            if state.get("is_safety_violation", False):
-                status = STATUS_BLOCKED
+            # Deterministic check: explicit constraint violation terminates immediately as STATUS_FAILED
+            if state.get("is_constraint_violation", False):
+                status = STATUS_FAILED
+                decision_source = "constraint_validator"
+                block_reason = "EXPLICIT_CONSTRAINT_VIOLATION"
+                telemetry = dict(state.get("telemetry", {}))
+                telemetry["decision_source"] = decision_source
+                telemetry["block_reason"] = block_reason
+                telemetry["terminal_reason"] = "EXPLICIT_CONSTRAINT_VIOLATION"
+                telemetry["violated_constraint"] = state.get("violated_constraint")
+                attempts_trace = list(telemetry.get("attempts_trace", []))
+                if attempts_trace:
+                    obs_stat = obs.status.value if hasattr(obs.status, "value") else str(obs.status)
+                    attempts_trace[-1]["observation_status"] = obs_stat
+                    attempts_trace[-1]["normalized_error"] = obs.normalized_error
+                    telemetry["attempts_trace"] = attempts_trace
                 return {
                     "observation": obs,
                     "status": status,
+                    "decision_source": decision_source,
+                    "block_reason": block_reason,
                     "execution_result": None,
                     "diagnosis": None,
                     "runtime_knowledge": None,
+                    "is_constraint_violation": True,
+                    "violated_constraint": state.get("violated_constraint"),
+                    "telemetry": telemetry,
+                }
+            # Deterministic check: explicit safety violations terminate immediately as STATUS_BLOCKED
+            elif state.get("is_safety_violation", False):
+                status = STATUS_BLOCKED
+                decision_source = "ast_guard"
+                block_reason = "AST_SAFETY_VIOLATION"
+                telemetry = dict(state.get("telemetry", {}))
+                telemetry["decision_source"] = decision_source
+                telemetry["block_reason"] = block_reason
+                telemetry["terminal_reason"] = state.get("safety_category", "safety_rejection")
+                attempts_trace = list(telemetry.get("attempts_trace", []))
+                if attempts_trace:
+                    obs_stat = obs.status.value if hasattr(obs.status, "value") else str(obs.status)
+                    attempts_trace[-1]["observation_status"] = obs_stat
+                    attempts_trace[-1]["normalized_error"] = obs.normalized_error
+                    telemetry["attempts_trace"] = attempts_trace
+                return {
+                    "observation": obs,
+                    "status": status,
+                    "decision_source": decision_source,
+                    "block_reason": block_reason,
+                    "execution_result": None,
+                    "diagnosis": None,
+                    "runtime_knowledge": None,
+                    "telemetry": telemetry,
                 }
             else:
                 status = STATUS_RETRYING
@@ -353,9 +674,18 @@ class ARMGRepairWorkflow:
             )
             status = STATUS_SUCCESS if exec_res.is_success else STATUS_RETRYING
 
+        telemetry = dict(state.get("telemetry", {}))
+        attempts_trace = list(telemetry.get("attempts_trace", []))
+        if attempts_trace:
+            obs_stat = obs.status.value if hasattr(obs.status, "value") else str(obs.status)
+            attempts_trace[-1]["observation_status"] = obs_stat
+            attempts_trace[-1]["normalized_error"] = obs.normalized_error
+            telemetry["attempts_trace"] = attempts_trace
+
         return {
             "observation": obs,
             "status": status,
+            "telemetry": telemetry,
         }
 
 
@@ -364,9 +694,27 @@ class ARMGRepairWorkflow:
         obs = state.get("observation")
         if obs is None:
             raise ValueError("Observation is required for error diagnosis")
-        diag = self.diagnoser.diagnose(obs, state.get("schema_context", {}))
+        diag = self.diagnoser.diagnose(
+            obs,
+            state.get("schema_context", {}),
+            explicit_constraints=state.get("explicit_constraints"),
+        )
+
+        telemetry = dict(state.get("telemetry", {}))
+        attempts_trace = list(telemetry.get("attempts_trace", []))
+        if attempts_trace:
+            attempts_trace[-1]["diagnosis"] = {
+                "taxonomy_category": diag.taxonomy_category.value if diag.taxonomy_category else None,
+                "broken_identifier": diag.broken_identifier,
+                "candidate_replacements": diag.candidate_replacements,
+                "repair_rule": diag.repair_rule,
+                "root_cause": diag.root_cause,
+            }
+            telemetry["attempts_trace"] = attempts_trace
+
         return {
             "diagnosis": diag,
+            "telemetry": telemetry,
         }
 
     def knowledge_node(self, state: ARMGState) -> Dict[str, Any]:
@@ -444,8 +792,15 @@ class ARMGRepairWorkflow:
             retrieved_memories=state.get("retrieved_memories"),
         )
 
+        telemetry = dict(state.get("telemetry", {}))
+        attempts_trace = list(telemetry.get("attempts_trace", []))
+        if attempts_trace:
+            attempts_trace[-1]["next_repair_prompt"] = prompt
+            telemetry["attempts_trace"] = attempts_trace
+
         return {
             "repair_prompt": prompt,
+            "telemetry": telemetry,
         }
 
     def memory_governance_node(self, state: ARMGState) -> Dict[str, Any]:
@@ -464,18 +819,27 @@ class ARMGRepairWorkflow:
             # Explicit safety policy violation: terminal block
             # Enforces: zero admission, zero reinforcement, zero FAISS insertion
             telemetry["memory_admission"] = "SAFETY_VIOLATION_BLOCKED"
-            telemetry["terminal_reason"] = state.get("safety_category", "safety_rejection")
+            telemetry["terminal_reason"] = state.get("block_reason") or state.get("safety_category", "safety_rejection")
             if t_logger:
                 t_logger.update_store_size_after_query(query_id=query_id, mode=mode, store_size_after=self.vector_store.count())
+            telemetry["total_latency_ms"] = round(
+                telemetry.get("intent_gate_duration_ms", 0.0)
+                + telemetry.get("generation_latency_ms", 0.0)
+                + telemetry.get("validation_latency_ms", 0.0)
+                + telemetry.get("execution_latency_ms", 0.0),
+                3,
+            )
             return {
                 "status": status,
+                "decision_source": state.get("decision_source"),
+                "block_reason": state.get("block_reason"),
                 "execution_result": None,
                 "diagnosis": None,
                 "runtime_knowledge": None,
                 "telemetry": telemetry,
             }
 
-        elif status == STATUS_SUCCESS:
+        elif status == STATUS_SUCCESS and not state.get("is_constraint_violation"):
             # If an existing memory was explicitly used as the repair rule, reinforce ONLY that memory
             if applied_id:
                 existing_mem = self.vector_store.get(applied_id)
@@ -538,9 +902,13 @@ class ARMGRepairWorkflow:
                 else:
                     telemetry["memory_admission"] = "EMBEDDING_FAILED"
 
-        elif status == STATUS_FAILED:
+        elif status == STATUS_FAILED or state.get("is_constraint_violation"):
             # Terminal failure: do NOT admit current runtime knowledge
-            telemetry["memory_admission"] = "TERMINAL_FAILURE_NOT_ADMITTED"
+            if state.get("is_constraint_violation") or telemetry.get("terminal_reason") == "EXPLICIT_CONSTRAINT_VIOLATION":
+                telemetry["memory_admission"] = "CONSTRAINT_VIOLATION_NOT_ADMITTED"
+                telemetry["terminal_reason"] = "EXPLICIT_CONSTRAINT_VIOLATION"
+            else:
+                telemetry["memory_admission"] = "TERMINAL_FAILURE_NOT_ADMITTED"
             # If an existing memory was used and failed, penalize ONLY that memory
             if applied_id:
                 existing_mem = self.vector_store.get(applied_id)
@@ -567,7 +935,8 @@ class ARMGRepairWorkflow:
 
         # Compute total latency
         telemetry["total_latency_ms"] = round(
-            telemetry.get("generation_latency_ms", 0.0)
+            telemetry.get("intent_gate_duration_ms", 0.0)
+            + telemetry.get("generation_latency_ms", 0.0)
             + telemetry.get("validation_latency_ms", 0.0)
             + telemetry.get("execution_latency_ms", 0.0),
             3,
@@ -578,9 +947,39 @@ class ARMGRepairWorkflow:
             "telemetry": telemetry,
         }
 
+    def quarantine_memory_by_id(
+        self,
+        memory_id: str,
+        reason: str = "EXPLICIT_CONSTRAINT_VIOLATION",
+    ) -> Optional[RuntimeMemory]:
+        """Inspect and quarantine an invalid memory from active retrieval using the governance engine.
+        
+        Transitions the memory to MemoryState.ARCHIVED, ensuring it cannot be retrieved for future queries.
+        
+        Args:
+            memory_id: String identifier of the memory to quarantine.
+            reason: Explanation of the quarantine reason.
+            
+        Returns:
+            Updated RuntimeMemory in ARCHIVED state if found and transitioned, None otherwise.
+        """
+        mem = self.vector_store.get(memory_id)
+        if mem is None:
+            return None
+        archived = self.governance_engine.archive_memory(mem, reason=reason)
+        self.vector_store.update_memory(archived)
+        return archived
+
     # =========================================================================
     # Conditional Routing Edges (Sections 13, 14, 15, 19)
     # =========================================================================
+
+    @staticmethod
+    def route_after_intent_gate(state: ARMGState) -> str:
+        """Route to memory governance if blocked by intent gate, else continue to schema introspection."""
+        if state.get("status") == STATUS_BLOCKED:
+            return "memory_governance_node"
+        return "introspect_and_prune_node"
 
     @staticmethod
     def route_after_ast_guard(state: ARMGState) -> str:
@@ -591,8 +990,8 @@ class ARMGRepairWorkflow:
 
     @staticmethod
     def route_after_observation(state: ARMGState) -> str:
-        """Route to memory governance if successful or blocked, else route to error diagnosis."""
-        if state.get("status") in (STATUS_SUCCESS, STATUS_BLOCKED):
+        """Route to memory governance if successful, blocked, or failed, else route to error diagnosis."""
+        if state.get("status") in (STATUS_SUCCESS, STATUS_BLOCKED, STATUS_FAILED):
             return "memory_governance_node"
         return "diagnosis_node"
 
@@ -613,6 +1012,7 @@ class ARMGRepairWorkflow:
         workflow = StateGraph(ARMGState)
 
         # Register nodes
+        workflow.add_node("intent_gate_node", self.intent_gate_node)
         workflow.add_node("introspect_and_prune_node", self.introspect_and_prune_node)
         workflow.add_node("memory_retrieval_node", self.memory_retrieval_node)
         workflow.add_node("sql_generator_node", self.sql_generator_node)
@@ -624,8 +1024,16 @@ class ARMGRepairWorkflow:
         workflow.add_node("repair_prompt_node", self.repair_prompt_node)
         workflow.add_node("memory_governance_node", self.memory_governance_node)
 
-        # Initial execution path
-        workflow.add_edge(START, "introspect_and_prune_node")
+        # Initial execution path with deterministic natural-language intent safety gate at graph entry
+        workflow.add_edge(START, "intent_gate_node")
+        workflow.add_conditional_edges(
+            "intent_gate_node",
+            self.route_after_intent_gate,
+            {
+                "memory_governance_node": "memory_governance_node",
+                "introspect_and_prune_node": "introspect_and_prune_node",
+            },
+        )
         workflow.add_edge("introspect_and_prune_node", "memory_retrieval_node")
         workflow.add_edge("memory_retrieval_node", "sql_generator_node")
         workflow.add_edge("sql_generator_node", "ast_guard_node")

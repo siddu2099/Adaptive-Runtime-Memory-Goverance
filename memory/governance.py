@@ -194,6 +194,23 @@ class MemoryGovernanceEngine:
 
         return memory.copy_with(status=target_state)
 
+    def archive_memory(
+        self,
+        memory: RuntimeMemory,
+        current_epoch: Optional[int] = None,
+        reason: Optional[str] = None,
+    ) -> RuntimeMemory:
+        """Explicitly quarantine/archive a memory artifact using an authorized lifecycle state transition.
+        
+        Transitions the memory to MemoryState.ARCHIVED, excluding it from active retrieval.
+        """
+        epoch = self.get_current_epoch(current_epoch)
+        archived = self.transition_state(memory, MemoryState.ARCHIVED)
+        return archived.copy_with(
+            archive_epoch=epoch,
+            simulated_epoch=epoch,
+        )
+
     def admit(
         self,
         knowledge: RuntimeKnowledge,

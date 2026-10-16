@@ -193,12 +193,14 @@ class DeterministicErrorDiagnoser:
         self,
         observation: RuntimeObservation,
         catalog_schema: Dict[str, Any],
+        explicit_constraints: Optional[Any] = None,
     ) -> DiagnosticResult:
         """Diagnose a runtime observation against the active database schema catalog.
         
         Args:
             observation: The RuntimeObservation produced by Phase 3.
             catalog_schema: The schema catalog dictionary from RuntimeEnvironment.inspect().
+            explicit_constraints: Optional ExplicitConstraints extracted from user request.
             
         Returns:
             DiagnosticResult containing taxonomy, root cause, candidates, negative constraints, and repair rule.
@@ -262,13 +264,29 @@ class DeterministicErrorDiagnoser:
         if rel_match:
             broken_id = rel_match.group(1)
             candidates = _resolve_table_candidates(broken_id, catalog_schema)
+            neg_constraints = [broken_id]
+            repair_rule = "Replace the invalid relation identifier with a schema-valid table."
+
+            if explicit_constraints and hasattr(explicit_constraints, "has_constraints") and explicit_constraints.has_constraints():
+                # Filter out prohibited tables from candidates
+                prohibited_lower = {p.lower() for p in getattr(explicit_constraints, "prohibited_tables", [])}
+                candidates = [c for c in candidates if c.lower() not in prohibited_lower]
+                neg_constraints.extend(getattr(explicit_constraints, "prohibited_tables", []))
+                neg_constraints = sorted(list(set(neg_constraints)))
+
+                if not getattr(explicit_constraints, "allow_table_substitution", True):
+                    candidates = []
+                    repair_rule = f"Table substitution is explicitly prohibited by user constraint. Do not substitute '{broken_id}' with any other table."
+                elif not candidates:
+                    repair_rule = f"All candidate replacement tables are prohibited by user constraints. Cannot substitute '{broken_id}'."
+
             return DiagnosticResult(
                 taxonomy_category=TaxonomyCategory.SEMANTIC,
                 broken_identifier=broken_id,
                 root_cause=f"Referenced relation '{broken_id}' does not exist in the active schema.",
                 candidate_replacements=candidates,
-                negative_constraints=[broken_id],
-                repair_rule="Replace the invalid relation identifier with a schema-valid table.",
+                negative_constraints=neg_constraints,
+                repair_rule=repair_rule,
             )
 
         # ======================================================================

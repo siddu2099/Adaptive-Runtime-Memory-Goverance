@@ -20,6 +20,7 @@ REPO_ROOT = str(Path(__file__).resolve().parent.parent)
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
+from agents.sql_generator import GenerationResult
 from environment.postgres import PostgreSQLEnvironment
 
 from graph.state import STATUS_BLOCKED, STATUS_FAILED, STATUS_RETRYING, STATUS_RUNNING, STATUS_SUCCESS
@@ -62,18 +63,17 @@ def get_engine_components():
         except Exception:
             st.session_state.environment = None
 
-    if "workflow" not in st.session_state:
-        if st.session_state.environment is not None:
-            st.session_state.workflow = ARMGRepairWorkflow(
-                environment=st.session_state.environment,
-                governance_engine=st.session_state.governance_engine,
-                vector_store=st.session_state.vector_store,
-            )
-        else:
-            st.session_state.workflow = None
+    if st.session_state.environment is not None:
+        workflow = ARMGRepairWorkflow(
+            environment=st.session_state.environment,
+            governance_engine=st.session_state.governance_engine,
+            vector_store=st.session_state.vector_store,
+        )
+    else:
+        workflow = None
 
     return (
-        st.session_state.workflow,
+        workflow,
         st.session_state.governance_engine,
         st.session_state.vector_store,
         st.session_state.environment,
@@ -121,6 +121,22 @@ with tab1:
         "Custom Query...",
     ]
 
+    def _sync_sample_query_selection():
+        sel = st.session_state.get("sample_query_select")
+        if sel == "Custom Query...":
+            # Retain existing query text or allow custom editing without clearing
+            pass
+        elif sel:
+            st.session_state["query_input_text"] = sel
+            # Clear manual override on new sample selection to prevent unintentional leakage
+            st.session_state["sql_override_text"] = ""
+
+    # Initialize default inputs if not in session state
+    if "query_input_text" not in st.session_state:
+        st.session_state["query_input_text"] = SAMPLE_QUERIES[2]
+    if "sql_override_text" not in st.session_state:
+        st.session_state["sql_override_text"] = ""
+
     col_q1, col_q2 = st.columns([2, 1])
     with col_q1:
         selected_sample = st.selectbox(
@@ -128,31 +144,61 @@ with tab1:
             SAMPLE_QUERIES,
             index=2,  # Default to revenue repair example
             key="sample_query_select",
+            on_change=_sync_sample_query_selection,
         )
 
     with col_q2:
-        max_retries_input = st.number_input(
-            "Max Repair Retries:",
-            min_value=1,
-            max_value=5,
-            value=3,
-            help="Maximum repair retries (locked default: 3 retries = 4 total generation attempts).",
-            key="max_retries_input",
+        st.write("")  # Visual alignment spacer
+
+    with st.form("query_execution_form", clear_on_submit=False):
+        col_f1, col_f2 = st.columns([3, 1])
+        with col_f1:
+            user_query = st.text_area(
+                "Query Input:",
+                height=70,
+                placeholder="Type a natural language question (e.g., 'What is the total revenue by region?')...",
+                key="query_input_text",
+            )
+        with col_f2:
+            max_retries_input = st.number_input(
+                "Max Repair Retries:",
+                min_value=0,
+                max_value=5,
+                value=3,
+                help="Maximum repair retries (0 = fail immediately on initial error; default: 3).",
+                key="max_retries_input",
+            )
+
+        st.markdown("**Advanced: Initial SQL Override (Optional):**")
+        st.caption(
+            "• **Empty:** Initial SQL is generated from Query Input via Ollama.\n"
+            "• **Non-empty:** Validates and executes this exact candidate first, bypassing initial Ollama generation.\n"
+            "• *Demonstrations: Enter invalid SQL (retries=0) for terminal failure, or DROP/ALTER for safety blocking.*"
+        )
+        sql_override = st.text_area(
+            "Advanced: Initial SQL Override (Optional):",
+            label_visibility="collapsed",
+            height=70,
+            placeholder="Optional: Enter initial SQL directly (e.g., 'SELECT g.region, SUM(f.revenue) ...' or 'DROP TABLE ...'). If left blank, SQL is generated via Ollama.",
+            key="sql_override_text",
+            help="Optional initial SQL override. When provided, ARMG validates and executes this exact SQL first without initial Ollama generation. If execution fails and retries remain, Ollama repair generator is invoked.",
         )
 
-    initial_text = "" if selected_sample == "Custom Query..." else selected_sample
-    user_query = st.text_area(
-        "Query Input:",
-        value=initial_text,
-        height=70,
-        placeholder="Type a natural language question (e.g., 'What is the total revenue by region?')...",
-        key="query_input_text",
-    )
+        curr_override_val = (sql_override or st.session_state.get("sql_override_text") or "").strip()
+        if curr_override_val:
+            st.caption("⚡ **Pre-Submission Mode: Manual SQL Override Active** — Candidate will execute directly without initial Ollama generation.")
+        else:
+            st.caption("🤖 **Pre-Submission Mode: Ollama Generation** — Manual override is empty; initial SQL will be generated from Query Input.")
 
-    run_btn = st.button("⚡ Execute Query", type="primary", key="execute_query_button")
+        run_btn = st.form_submit_button("⚡ Execute Query", type="primary")
 
     if run_btn:
-        if not user_query.strip():
+        submitted_query = (user_query or st.session_state.get("query_input_text", "")).strip()
+        raw_override = sql_override if sql_override is not None else st.session_state.get("sql_override_text", "")
+        cleaned_override = raw_override.strip() if raw_override else ""
+        submitted_retries = int(max_retries_input if max_retries_input is not None else st.session_state.get("max_retries_input", 3))
+
+        if not submitted_query:
             st.warning("Please enter a query before executing.")
         elif workflow is None or environment is None:
             st.error(
@@ -161,12 +207,19 @@ with tab1:
         else:
             with st.spinner("Executing through ARMG Workflow..."):
                 try:
+                    # Clear stale last execution state before new run
+                    st.session_state["last_execution_state"] = None
                     app_graph = workflow.build_graph()
-                    exec_state = app_graph.invoke({
-                        "user_query": user_query.strip(),
-                        "max_retries": int(max_retries_input),
-                    })
+                    exec_payload = {
+                        "user_query": submitted_query,
+                        "max_retries": submitted_retries,
+                    }
+                    if cleaned_override:
+                        exec_payload["initial_sql_override"] = cleaned_override
+
+                    exec_state = app_graph.invoke(exec_payload)
                     st.session_state["last_execution_state"] = exec_state
+                    st.session_state["demo_label"] = "Live Execution Pipeline"
                 except Exception as ex:
                     st.error(f"Execution failed with runtime exception: {ex}")
 
@@ -175,31 +228,118 @@ with tab1:
     if last_state:
         status = last_state.get("status", STATUS_FAILED)
         retries = last_state.get("retry_count", 0)
+        max_ret = last_state.get("max_retries", 3)
         telemetry = last_state.get("telemetry", {})
+        attempts = telemetry.get("generation_attempts", retries + 1)
 
         st.divider()
+
+        # Submitted Run Context & Execution Source Indicator (Requirement D)
+        has_override_in_run = bool(last_state.get("initial_sql_override"))
+        sql_source_label = "Manual override" if has_override_in_run else "Ollama generation"
+        sql_source_badge = "⚡ Manual Override" if has_override_in_run else "🤖 Ollama Generation"
+        submitted_q = last_state.get("user_query", "")
+        submitted_override_val = last_state.get("initial_sql_override")
+        submitted_budget = last_state.get("max_retries", 3)
+
+        with st.container():
+            col_meta1, col_meta2, col_meta3 = st.columns([2, 1, 1])
+            with col_meta1:
+                st.markdown(f"**Submitted Question:** `{submitted_q}`")
+                if has_override_in_run:
+                    st.caption(f"**Submitted SQL Override:** `{submitted_override_val}`")
+                else:
+                    st.caption("**Submitted SQL Override:** *(None — Ollama Generation Mode)*")
+            with col_meta2:
+                st.markdown(f"**Initial SQL source:** `{sql_source_label}`")
+                st.caption(f"**Execution Mode:** `{sql_source_badge}`")
+            with col_meta3:
+                st.markdown(f"**Max Retries Budget:** `{submitted_budget}`")
+                st.caption(f"**Attempted Retries:** `{retries} / {submitted_budget}`")
+
+        # Demonstration Label Badge
+        demo_label = st.session_state.get("demo_label", "Live Execution Pipeline")
+        is_fixture = "Demonstration Fixture" in demo_label
+        if is_fixture:
+            st.info(f"🏷️ **Source Mode:** `{demo_label}` — *Controlled demonstration fixture for reproducible evaluation. Model tokens and generation latency are demonstration fixture values; AST validation, PostgreSQL database execution, error diagnosis, and memory governance are live measured runtime.*")
 
         # Status Banner
         if status == STATUS_SUCCESS:
             if retries > 0:
                 st.success(f"**STATUS: SUCCESS (REPAIRED)** — Resolved after {retries} repair retry attempt(s)")
             else:
-                st.success("**STATUS: SUCCESS** — Resolved on initial generation attempt (0 retries)")
+                if last_state.get("initial_sql_override"):
+                    st.success("**STATUS: SUCCESS** — Resolved via manual SQL override (0 retries)")
+                else:
+                    st.success("**STATUS: SUCCESS** — Resolved on initial generation attempt (0 retries)")
         elif status == STATUS_BLOCKED:
-            sec_cat = last_state.get("safety_category", "explicit safety policy")
-            st.error(f"🛡️ **STATUS: BLOCKED** — Execution permanently prevented by AST safety guardrail ({sec_cat}). Destructive mutations and non-read-only operations are strictly prohibited.")
+            decision_source = last_state.get("decision_source") or telemetry.get("decision_source")
+            block_reason = last_state.get("block_reason") or telemetry.get("block_reason")
+            if decision_source == "natural_language_intent_gate":
+                if block_reason == "AMBIGUOUS_INTENT_CLARIFICATION_REQUIRED":
+                    st.warning(
+                        f"⚠️ **STATUS: CLARIFICATION REQUIRED** — Execution halted by Natural-Language Intent Gate. "
+                        f"The query is ambiguous and cannot safely proceed without clarification: `{submitted_q}`."
+                    )
+                else:
+                    st.error(
+                        f"🛡️ **STATUS: BLOCKED** — Execution permanently prevented by Natural-Language Intent Gate "
+                        f"({block_reason or 'DESTRUCTIVE_INTENT_DETECTED'}). Explicit destructive database requests are strictly prohibited."
+                    )
+            else:
+                sec_cat = last_state.get("safety_category", "explicit safety policy")
+                st.error(f"🛡️ **STATUS: BLOCKED** — Execution permanently prevented by AST safety guardrail ({sec_cat}). Destructive mutations and non-read-only operations are strictly prohibited.")
         elif status == STATUS_RETRYING:
-            st.warning(f"**STATUS: RETRYING** — Currently in repair iteration {retries}")
+            st.warning(f"**STATUS: RETRYING** — Currently in repair iteration {retries} / {max_ret}")
         else:
-            st.error(f"**STATUS: FAILED** — Exhausted all {retries} repair retry attempts without resolution")
+            if last_state.get("is_constraint_violation") or telemetry.get("terminal_reason") == "EXPLICIT_CONSTRAINT_VIOLATION":
+                viol = last_state.get("violated_constraint") or telemetry.get("violated_constraint") or "Repaired query violated explicit user constraint."
+                st.error(f"🛑 **STATUS: FAILED (EXPLICIT CONSTRAINT VIOLATION)** — {viol} The violating candidate was blocked before PostgreSQL execution.")
+            elif max_ret == 0 or retries == 0:
+                st.error(f"**STATUS: FAILED** — Initial execution failed with repair retries configured to {max_ret} (no retries attempted)")
+            else:
+                st.error(f"**STATUS: FAILED** — Exhausted all {retries} repair retry attempts without resolution")
 
-        # Telemetry metrics cards
-        t_col1, t_col2, t_col3, t_col4, t_col5 = st.columns(5)
-        t_col1.metric("Status", status)
-        t_col2.metric("Retry Count", f"{retries} / {last_state.get('max_retries', 3)}")
-        t_col3.metric("Generation Attempts", telemetry.get("generation_attempts", 1))
+        # Telemetry metrics cards (Row 1: Lifecycle & Budget)
+        sql_attempts = telemetry.get("sql_execution_attempts", telemetry.get("generation_attempts", retries + 1))
+        candidates_eval = telemetry.get("sql_candidate_evaluations", sql_attempts)
+        pg_calls = telemetry.get("postgres_executor_calls", 0 if status == STATUS_BLOCKED else (1 if last_state.get("execution_result") else 0))
+        ollama_gens = telemetry.get("ollama_generation_attempts", 0 if last_state.get("initial_sql_override") and retries == 0 else attempts)
+
+        m_col1, m_col2, m_col3, m_col4, m_col5, m_col6 = st.columns(6)
+        m_col1.metric("Status", status)
+        m_col2.metric("Guard Evaluations", candidates_eval)
+        m_col3.metric("PostgreSQL Calls", pg_calls)
+        m_col4.metric("Ollama Generations", ollama_gens)
+        m_col5.metric("Retry Count", f"{retries} / {max_ret}")
+        rem_budget = max(0, max_ret - retries) if status != STATUS_SUCCESS else "Resolved"
+        m_col6.metric("Remaining Budget", f"{rem_budget}")
+
+        # Telemetry metrics cards (Row 2: Tokens & Timing)
+        t_col1, t_col2, t_col3, t_col4 = st.columns(4)
+        p_tok = telemetry.get("prompt_tokens")
+        c_tok = telemetry.get("completion_tokens")
+        tot_tokens = telemetry.get("total_tokens")
+        if is_fixture:
+            t_col1.metric("Prompt Tokens", f"{p_tok} (Demo Fixture)" if p_tok is not None else "N/A")
+            t_col2.metric("Generated Tokens", f"{c_tok} (Demo Fixture)" if c_tok is not None else "N/A")
+            t_col3.metric("Total Tokens", f"{tot_tokens} (Demo Fixture)" if tot_tokens is not None else "N/A")
+        else:
+            t_col1.metric("Prompt Tokens", p_tok if p_tok is not None else "N/A")
+            t_col2.metric("Generated Tokens", c_tok if c_tok is not None else "N/A")
+            t_col3.metric("Total Tokens", tot_tokens if tot_tokens is not None else "N/A")
         t_col4.metric("Total Latency", f"{telemetry.get('total_latency_ms', 0.0):.1f} ms")
-        t_col5.metric("Total Tokens", telemetry.get("total_tokens", 0))
+
+        # Stage Timing Breakdown
+        gate_ms = telemetry.get("intent_gate_duration_ms", 0.0)
+        gen_ms = telemetry.get("generation_latency_ms", 0.0)
+        val_ms = telemetry.get("validation_latency_ms", 0.0)
+        exec_ms = telemetry.get("execution_latency_ms", 0.0)
+        gen_label = "Live Ollama" if ollama_gens > 0 else "None (Manual SQL / Gate Blocked)"
+        if is_fixture:
+            st.caption(f"⏱️ **Stage Timing Breakdown** — Intent Gate: `{gate_ms:.2f} ms` | Generation: `{gen_ms:.1f} ms (Demo Fixture)` | AST Validation: `{val_ms:.1f} ms (Measured)` | PostgreSQL Execution: `{exec_ms:.1f} ms (Measured)`")
+        else:
+            st.caption(f"⏱️ **Stage Timing Breakdown** — Intent Gate: `{gate_ms:.2f} ms (Measured)` | Generation: `{gen_ms:.1f} ms ({gen_label})` | AST Validation: `{val_ms:.1f} ms (Measured)` | PostgreSQL Execution: `{exec_ms:.1f} ms (Measured)`")
 
         # Trace Section 1: Schema Context
         with st.expander("1. Pruned Schema Context", expanded=False):
@@ -224,17 +364,46 @@ with tab1:
         col_sql1, col_sql2 = st.columns(2)
 
         with col_sql1:
-            if status == STATUS_BLOCKED:
-                st.markdown("**Generated SQL — BLOCKED:**")
+            has_override = bool(last_state.get("initial_sql_override"))
+            if last_state.get("decision_source") == "natural_language_intent_gate":
+                st.markdown("**SQL Generation — BYPASSED (Blocked by Intent Gate):**")
+                final_sql = "-- No SQL candidate generated (Blocked prior to generation by Natural-Language Intent Safety Gate) --"
+                st.code(final_sql, language="sql")
+                st.caption(f"Block Reason: `{last_state.get('block_reason', 'DESTRUCTIVE_INTENT_DETECTED')}`")
+            elif status == STATUS_BLOCKED:
+                if has_override:
+                    st.markdown("**Submitted SQL Override — BLOCKED:**")
+                else:
+                    st.markdown("**Generated SQL — BLOCKED:**")
+                final_sql = last_state.get("generated_sql", "-- No SQL generated --")
+                st.code(final_sql, language="sql")
             elif not last_state.get("validation_passed", True):
-                st.markdown("**Generated SQL (Validation Failed):**")
+                if has_override:
+                    st.markdown("**Submitted SQL Override (Validation Failed):**")
+                else:
+                    st.markdown("**Generated SQL (Validation Failed):**")
+                final_sql = last_state.get("generated_sql", "-- No SQL generated --")
+                st.code(final_sql, language="sql")
             elif status == STATUS_SUCCESS:
-                st.markdown("**Final Executed SQL Query:**")
+                if has_override:
+                    if retries > 0:
+                        st.markdown("**Final Executed SQL Query (Repaired via Ollama):**")
+                    else:
+                        st.markdown("**Final Executed SQL Query (Manual Override):**")
+                else:
+                    st.markdown("**Final Executed SQL Query:**")
+                final_sql = last_state.get("generated_sql", "-- No SQL generated --")
+                st.code(final_sql, language="sql")
             else:
-                st.markdown("**Final Generated SQL Query:**")
+                if has_override and retries == 0:
+                    st.markdown("**Submitted SQL Override (Execution Failed):**")
+                else:
+                    st.markdown("**Final Generated SQL Query:**")
+                final_sql = last_state.get("generated_sql", "-- No SQL generated --")
+                st.code(final_sql, language="sql")
 
-            final_sql = last_state.get("generated_sql", "-- No SQL generated --")
-            st.code(final_sql, language="sql")
+            if has_override and retries > 0:
+                st.caption(f"Initial Manual Override (Failed): `{last_state.get('initial_sql_override')}`")
 
             if last_state.get("previous_sql"):
                 st.warning(f"Previous Failed SQL (Attempt {retries}):")
@@ -244,26 +413,36 @@ with tab1:
                     st.caption(f"Prior Attempt Failure: {prev_err}")
 
         with col_sql2:
-            st.markdown("**AST Guardrail Inspection:**")
-            if last_state.get("validation_passed", False):
-                st.info("🛡️ **AST VALIDATION PASSED** — Single safe read-only SELECT verified.")
+            if last_state.get("decision_source") == "natural_language_intent_gate":
+                st.markdown("**Safety Guardrail Inspection:**")
+                st.error(f"🛡️ **INTENT SAFETY GATE**: BLOCKED (`{last_state.get('block_reason', 'DESTRUCTIVE_INTENT_DETECTED')}`)")
+                st.info("🔍 **AST Guardrail**: NOT EVALUATED (Bypassed — No SQL candidate generated)")
+                st.info("⚡ **PostgreSQL**: NOT EXECUTED (Operation blocked prior to generation)")
+            elif last_state.get("is_constraint_violation"):
+                st.markdown("**Constraint Guardrail Inspection:**")
+                st.error(f"🛑 **CONSTRAINT VALIDATION FAILED**: {last_state.get('violated_constraint')}")
+                st.info("⚡ **PostgreSQL**: NOT EXECUTED (Violating candidate blocked before executor invocation)")
             else:
-                val_err = last_state.get("validation_error", "Unknown validation rejection")
-                st.error(f"🚫 **AST VALIDATION FAILED**: {val_err}")
-
-            if status == STATUS_BLOCKED:
-                st.info("⚡ **PostgreSQL**: NOT EXECUTED (Operation permanently blocked by safety guardrail)")
-            elif not last_state.get("validation_passed", True):
-                st.info("⚡ **PostgreSQL**: NOT EXECUTED (AST validation failed before execution)")
-            else:
-                exec_res = last_state.get("execution_result")
-                if exec_res:
-                    if exec_res.is_success:
-                        st.success(f"⚡ **PostgreSQL Execution Success** ({exec_res.execution_time_ms:.1f} ms)")
-                    else:
-                        st.error(f"❌ **PostgreSQL Execution Error**: {exec_res.error}")
+                st.markdown("**AST Guardrail Inspection:**")
+                if last_state.get("validation_passed", False):
+                    st.info("🛡️ **AST VALIDATION PASSED** — Single safe read-only SELECT verified.")
                 else:
-                    st.info("⚡ **PostgreSQL**: NOT EXECUTED")
+                    val_err = last_state.get("validation_error", "Unknown validation rejection")
+                    st.error(f"🚫 **AST VALIDATION FAILED**: {val_err}")
+
+                if status == STATUS_BLOCKED:
+                    st.info("⚡ **PostgreSQL**: NOT EXECUTED (Operation permanently blocked by safety guardrail)")
+                elif not last_state.get("validation_passed", True):
+                    st.info("⚡ **PostgreSQL**: NOT EXECUTED (AST validation failed before execution)")
+                else:
+                    exec_res = last_state.get("execution_result")
+                    if exec_res:
+                        if exec_res.is_success:
+                            st.success(f"⚡ **PostgreSQL Execution Success** ({exec_res.execution_time_ms:.1f} ms)")
+                        else:
+                            st.error(f"❌ **PostgreSQL Execution Error**: {exec_res.error}")
+                    else:
+                        st.info("⚡ **PostgreSQL**: NOT EXECUTED")
 
         # Trace Section 4: Query Results Table
         exec_res = last_state.get("execution_result")
@@ -311,6 +490,67 @@ with tab1:
             st.markdown(f"- **Reinforced Memory ID:** `{telemetry['reinforced_memory_id']}`")
         if telemetry.get("penalized_memory_id"):
             st.markdown(f"- **Penalized Memory ID:** `{telemetry['penalized_memory_id']}`")
+
+        # Trace Section 7: End-to-End Attempt Lifecycle Audit Trail
+        attempts_trace = telemetry.get("attempts_trace", [])
+        if attempts_trace:
+            with st.expander(f"Detailed Attempt Lifecycle Audit Trail ({len(attempts_trace)} Attempt{'s' if len(attempts_trace) > 1 else ''})", expanded=True):
+                for att in attempts_trace:
+                    att_num = att.get("attempt", 1)
+                    if att.get("is_manual_override"):
+                        att_type = "Manual Initial SQL Override"
+                    elif not att.get("is_repair"):
+                        att_type = "Initial Ollama Generation"
+                    else:
+                        att_type = f"Ollama Repair Iteration {att_num - 1}"
+                    st.markdown(f"#### Attempt {att_num}: {att_type} — `{att.get('timestamp', '')}`")
+                    c_a1, c_a2 = st.columns(2)
+                    with c_a1:
+                        st.markdown("**Submitted / Generated SQL:**")
+                        st.code(att.get("sql", "-- Empty --"), language="sql")
+                        p_t = att.get("prompt_tokens")
+                        c_t = att.get("completion_tokens")
+                        dur = att.get("generation_duration_ms", 0.0)
+                        if att.get("is_manual_override"):
+                            st.caption(f"Latency: `0.0 ms (Manual SQL Input)` | Prompt Tokens: `N/A (No Model Generation)` | Generated Tokens: `N/A (No Model Generation)`")
+                        elif is_fixture:
+                            st.caption(f"Latency: `{dur:.1f} ms (Demo Fixture)` | Prompt Tokens: `{p_t} (Demo Fixture)` | Generated Tokens: `{c_t} (Demo Fixture)`")
+                        else:
+                            st.caption(f"Latency: `{dur:.1f} ms (Live Ollama)` | Prompt Tokens: `{p_t if p_t is not None else 'N/A'}` | Generated Tokens: `{c_t if c_t is not None else 'N/A'}`")
+                    with c_a2:
+                        st.markdown("**AST Guardrail & Safety Decision:**")
+                        if att.get("is_constraint_violation"):
+                            st.error(f"🛑 **EXPLICIT CONSTRAINT VIOLATION**: {att.get('violated_constraint')}")
+                        elif att.get("ast_valid"):
+                            st.info("🛡️ **AST Guard PASSED**: Single safe read-only SELECT verified.")
+                        else:
+                            if att.get("is_safety_violation"):
+                                st.error(f"🛑 **SAFETY VIOLATION BLOCKED**: `{att.get('safety_category')}` — {att.get('ast_error')}")
+                            else:
+                                st.error(f"🚫 **AST VALIDATION REJECTED**: {att.get('ast_error')}")
+
+                        st.markdown("**PostgreSQL Database Execution:**")
+                        if att.get("executed_in_db"):
+                            if att.get("exec_success"):
+                                st.success(f"⚡ **SUCCESS**: Returned `{att.get('row_count')}` row(s) in `{att.get('exec_time_ms', 0.0):.2f} ms`")
+                            else:
+                                st.error(f"❌ **DATABASE ERROR**: `{att.get('exec_error')}`")
+                        else:
+                            st.info("⚡ **NOT EXECUTED**: Database executor bypassed (Operation blocked by AST safety guard)")
+
+                    if att.get("diagnosis"):
+                        d_info = att["diagnosis"]
+                        st.markdown(f"**Diagnostic Taxonomy:** `{d_info.get('taxonomy_category')}` | Broken Identifier: `{d_info.get('broken_identifier')}`")
+                        st.markdown(f"- **Root Cause:** {d_info.get('root_cause')}")
+                        st.markdown(f"- **Candidate Replacements:** `{d_info.get('candidate_replacements')}`")
+                        st.markdown(f"- **Strict Repair Rule:** {d_info.get('repair_rule')}")
+
+                    st.divider()
+        elif status == STATUS_BLOCKED and last_state.get("decision_source") == "natural_language_intent_gate":
+            st.info("ℹ️ **Lifecycle Audit Trail**: Zero SQL candidate generation attempts executed. The request was blocked before SQL generation by the Natural-Language Intent Safety Gate.")
+
+        # Semantic Correctness Ground-Truth Note
+        st.info("Execution success confirms that the SQL executed successfully against the current database. It does not, by itself, establish semantic equivalence with the intended answer; that requires comparison against verified reference results.")
 
 
 # =============================================================================

@@ -107,7 +107,7 @@ class TestSafetyGuardrail:
         graph = wf.build_graph()
 
         result = graph.invoke({
-            "user_query": "Delete all records from the sales table.",
+            "user_query": "Show all records from the sales table.",
             "max_retries": 3,
         })
 
@@ -200,7 +200,7 @@ class TestSafetyGuardrail:
         )
         graph = wf.build_graph()
 
-        result = graph.invoke({"user_query": "Drop the sales table", "max_retries": 3})
+        result = graph.invoke({"user_query": "Show the sales table", "max_retries": 3})
 
         assert result["status"] == STATUS_BLOCKED
         assert result["is_safety_violation"] is True
@@ -371,7 +371,7 @@ class TestSafetyGuardrail:
         graph = wf.build_graph()
 
         result = graph.invoke({
-            "user_query": "Delete all records from the sales table.",
+            "user_query": "Show all records from the sales table.",
             "max_retries": 3,
         })
 

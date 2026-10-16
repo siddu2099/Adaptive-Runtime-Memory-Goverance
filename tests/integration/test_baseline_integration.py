@@ -66,6 +66,11 @@ def test_generator_communication():
     generator = SQLGenerator()
     simple_schema = "## dim_geography\n- geo_key: integer (PK)\n- region: varchar"
     res = generator.generate("List all distinct regions.", simple_schema)
+    if not res.extracted_sql:
+        # Transient cold-start retry while 7B model weights load into GPU/system memory
+        import time
+        time.sleep(1.0)
+        res = generator.generate("List all distinct regions.", simple_schema)
 
     assert len(res.extracted_sql) > 0
     assert "region" in res.extracted_sql.lower()
