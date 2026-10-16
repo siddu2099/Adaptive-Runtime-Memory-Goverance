@@ -88,7 +88,7 @@ $$\text{ExecSucc}(s) = 1 \centernot\implies \text{ExecAcc}(s) = 1$$
 
 ## 4. Canonical System Architecture
 
-The implemented architecture is a closed-loop directed execution graph comprising 10 distinct nodes orchestrated via LangGraph ([`graph/workflow.py`](file:///c:/Users/siddu/Pictures/armg%20main/graph/workflow.py)):
+The implemented architecture is a closed-loop directed execution graph comprising 11 distinct nodes orchestrated via LangGraph ([`graph/workflow.py`](file:///c:/Users/siddu/Pictures/armg%20main/graph/workflow.py)):
 
 ```
        +---------------------------------------------------------------+
@@ -97,71 +97,83 @@ The implemented architecture is a closed-loop directed execution graph comprisin
                                        |
                                        v
        +---------------------------------------------------------------+
-       | Node 1: Schema Introspection & Deterministic Keyword Pruning  |
-       +---------------------------------------------------------------+
-                                       |
-                                       v
-       +---------------------------------------------------------------+
-       | Node 2: Governed Vector Memory Retrieval (FAISS L2, Tau=0.50) |
-       +---------------------------------------------------------------+
-                                       |
-                                       v
-       +---------------------------------------------------------------+
-       | Node 3: LLM SQL Generation (qwen2.5:7b-instruct, Temp=0.0)    |
-       +---------------------------------------------------------------+
-                                       |
-                                       v
-       +---------------------------------------------------------------+
-       | Node 4: Static AST Safety Guard (SQLGlot Pre-Execution Check) |
+       | Node 1: NLP Intent Safety Gate (Rule-based Intent Classifier) |
        +---------------------------------------------------------------+
                       /                                 \
-           [Destructive DDL/DML]                  [Valid SELECT]
+           [Destructive / Ambiguous]               [Safe / Analytical]
                     /                                     \
                    v                                       v
          +------------------+                   +----------------------+
-         |  STATUS_BLOCKED  |                   | Node 5: PostgreSQL   |
-         | (Zero DB Access) |                   | Execution Warehouse  |
+         |  STATUS_BLOCKED  |                   | Node 2: Introspect & |
+         |  (Zero DB / LLM) |                   | Prune + Constraints  |
          +------------------+                   +----------------------+
-                                                        /     \
-                                              [Success]/       \[Failure]
-                                                      v         v
-                                          +-------------+     +-------------------+
-                                          | Node 10:    |     | Node 6: Passive   |
-                                          | Memory      |     | Error Observation |
-                                          | Governance  |     +-------------------+
-                                          +-------------+               |
-                                                 ^                      v
-                                                 |            +-------------------+
-                                           [Max Retries       | Node 7: 7-Tier    |
-                                            Exhausted]        | Error Diagnosis   |
-                                                 |            +-------------------+
-                                                 |                      |
-                                                 |                      v
-                                          +-------------+     +-------------------+
-                                          | STATUS_     |     | Node 8: Ephemeral |
-                                          | FAILED      |     | Knowledge Extract |
-                                          +-------------+     +-------------------+
-                                                 ^                      |
-                                                 |                      v
-                                                 |            +-------------------+
-                                          (Retry Budget > 3)  | Node 9: Strict    |
-                                                              | Repair Prompting  |
-                                                              +-------------------+
-                                                                        |
-                                                                        +---> (Loop back to Node 3)
+                   |                                       |
+                   |                                       v
+                   |                            +----------------------+
+                   |                            | Node 3: Governed     |
+                   |                            | Vector Retrieval     |
+                   |                            +----------------------+
+                   |                                       |
+                   |                                       v
+                   |                            +----------------------+
+                   |                            | Node 4: LLM SQL Gen  |
+                   |                            | (qwen2.5:7b-instruct)|
+                   |                            +----------------------+
+                   |                                       |
+                   |                                       v
+                   |                            +----------------------+
+                   |                            | Node 5: AST Guard &  |
+                   |                            | Constraint Validator |
+                   |                            +----------------------+
+                   |                                   /        \
+                   |                        [Violation]          \[Valid SELECT]
+                   |                           /                  \
+                   |                          v                    v
+                   |                +------------------+  +--------------------+
+                   |                |  STATUS_BLOCKED  |  | Node 6: PostgreSQL |
+                   |                | (Zero DB Access) |  | Execution DB       |
+                   |                +------------------+  +--------------------+
+                   |                          |                   /     \
+                   |                          |         [Success]/       \[Failure]
+                   |                          |                 v         v
+                   |                          +---> +-------------+     +-------------------+
+                   +------------------------------> | Node 11:    |     | Node 7: Passive   |
+                                                    | Memory      |     | Error Observation |
+                                                    | Governance  |     +-------------------+
+                                                    +-------------+               |
+                                                           ^                      v
+                                                           |            +-------------------+
+                                                     [Max Retries       | Node 8: 7-Tier    |
+                                                      Exhausted]        | Error Diagnosis   |
+                                                           |            +-------------------+
+                                                           |                      |
+                                                           |                      v
+                                                    +-------------+     +-------------------+
+                                                    | STATUS_     |     | Node 9: Ephemeral |
+                                                    | FAILED      |     | Knowledge Extract |
+                                                    +-------------+     +-------------------+
+                                                           ^                      |
+                                                           |                      v
+                                                           |            +-------------------+
+                                                    (Retry Budget > 3)  | Node 10: Strict   |
+                                                                        | Repair Prompting  |
+                                                                        +-------------------+
+                                                                                  |
+                                                                                  +---> (Loop to Node 4)
 ```
 
 ### Detailed Node Execution Sequence
-1. **Node 1: `introspect_and_prune_node`**: Introspects relational database catalog metadata via zero-token `information_schema` queries. Deterministically prunes schema down to query-relevant tables using rule-based token matching.
-2. **Node 2: `memory_retrieval_node`**: Computes unit-L2 normalized 768-dimensional query embedding via local `nomic-embed-text`. Performs nearest-neighbor search in FAISS CPU store, retrieving active/stable memories exceeding threshold $\tau = 0.50$.
-3. **Node 3: `sql_generator_node`**: Generates initial candidate SQL query or regenerates repaired SQL query using local `qwen2.5:7b-instruct` under greedy decoding (`temperature = 0.0`).
-4. **Node 4: `ast_guard_node`**: Performs static pre-execution Abstract Syntax Tree (AST) validation using SQLGlot. Verifies single-statement execution and blocks destructive mutations.
-5. **Node 5: `postgres_executor_node`**: Submits validated read-only SQL queries to physical PostgreSQL instance, capturing execution status, result rows, execution latency, and raw driver errors.
-6. **Node 6: `observation_node`**: Passively normalizes raw execution exceptions or validation rejections into an immutable [`RuntimeObservation`](file:///c:/Users/siddu/Pictures/armg%20main/environment/observation.py#L23-L57) record without root-cause classification.
-7. **Node 7: `diagnosis_node`**: Deterministically classifies normalized error traces into a 7-tier exception taxonomy, extracts broken identifiers, resolves valid schema candidate remappings, and generates negative constraints.
-8. **Node 8: `knowledge_node`**: Transforms diagnostic findings into an ephemeral [`RuntimeKnowledge`](file:///c:/Users/siddu/Pictures/armg%20main/memory/models.py#L20-L78) artifact and evaluates the retry budget ($K \le 3$).
-9. **Node 9: `repair_prompt_node`**: Assembles the strictly bounded repair prompt containing the isolated `[STRICT REPAIR CONSTRAINTS]` block.
-10. **Node 10: `memory_governance_node`**: Applies mathematical governance upon terminal states (`STATUS_SUCCESS`, `STATUS_FAILED`, `STATUS_BLOCKED`). Enforces mutual exclusion: reinforces applied memories or admits fresh operational knowledge into FAISS.
+1. **Node 1: `intent_gate_node`**: Evaluates natural language input strings via deterministic regex and rule heuristics (`validation/intent_classifier.py`). Categorizes into `SAFE`, `BLOCKED`, `AMBIGUOUS`, or `EXPLANATORY`. Blocks destructive queries or unresolvable ambiguities directly to Node 11 with zero LLM prompt tokens and zero DB driver calls.
+2. **Node 2: `introspect_and_prune_node`**: Introspects relational database catalog metadata via zero-token `information_schema` queries. Deterministically prunes schema to query-relevant tables and extracts explicit user constraints (`required_tables`, `prohibited_tables`, `output_columns`).
+3. **Node 3: `memory_retrieval_node`**: Computes unit-$L_2$ normalized 768-dimensional query embedding via local `nomic-embed-text`. Performs nearest-neighbor search in FAISS CPU store, retrieving active/stable memories exceeding threshold $\tau = 0.50$, filtered against active table constraints.
+4. **Node 4: `sql_generator_node`**: Generates initial candidate SQL query or regenerates repaired SQL query using local `qwen2.5:7b-instruct` under greedy decoding (`temperature = 0.0`), with support for manual SQL overrides.
+5. **Node 5: `ast_guard_node`**: Dual-layer pre-execution validator combining SQLGlot AST parsing with explicit user-constraint validation (`validation/constraint_validator.py`). Enforces read-only SELECT root expressions, validates required table presence, prohibits forbidden tables, and validates output column projections (rejecting unconstrained wildcard `*` leakage).
+6. **Node 6: `postgres_executor_node`**: Submits validated read-only SQL queries to physical PostgreSQL instance, capturing execution status, result rows, execution latency, and raw driver errors.
+7. **Node 7: `observation_node`**: Passively normalizes raw execution exceptions or validation rejections into an immutable [`RuntimeObservation`](file:///c:/Users/siddu/Pictures/armg%20main/environment/observation.py#L23-L57) record without root-cause classification.
+8. **Node 8: `diagnosis_node`**: Deterministically classifies normalized error traces into a 7-tier exception taxonomy, extracts broken identifiers, resolves valid schema candidate remappings, and generates negative constraints (preserving user constraints).
+9. **Node 9: `knowledge_node`**: Transforms diagnostic findings into an ephemeral [`RuntimeKnowledge`](file:///c:/Users/siddu/Pictures/armg%20main/memory/models.py#L20-L78) artifact and evaluates the retry budget ($K \le 3$).
+10. **Node 10: `repair_prompt_node`**: Assembles the strictly bounded repair prompt containing the isolated `[STRICT REPAIR CONSTRAINTS]` block and routes execution back to Node 4.
+11. **Node 11: `memory_governance_node`**: Applies mathematical governance upon terminal states (`STATUS_SUCCESS`, `STATUS_FAILED`, `STATUS_BLOCKED`). Enforces mutual exclusion: reinforces applied memories or admits fresh operational knowledge into FAISS; strictly bars memory admission or reinforcement on blocked requests, constraint violations, or terminal failures.
 
 ---
 
@@ -169,6 +181,8 @@ The implemented architecture is a closed-loop directed execution graph comprisin
 
 | Component | Repository Path | Main Class / Function | Responsibility | Inputs | Outputs |
 | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Intent Classifier** | [`validation/intent_classifier.py`](file:///c:/Users/siddu/Pictures/armg%20main/validation/intent_classifier.py) | [`IntentClassifier`](file:///c:/Users/siddu/Pictures/armg%20main/validation/intent_classifier.py#L12) | Rule-based natural-language pre-generation safety filter | Raw user question string | `(intent_category, reason)` |
+| **Constraint Validator** | [`validation/constraint_validator.py`](file:///c:/Users/siddu/Pictures/armg%20main/validation/constraint_validator.py) | [`ConstraintValidator`](file:///c:/Users/siddu/Pictures/armg%20main/validation/constraint_validator.py#L18) | Validates required/prohibited tables and output column projections | SQL AST, explicit user constraints | `(is_valid: bool, reason: str)` |
 | **Target Runtime Adapter** | [`environment/postgres.py`](file:///c:/Users/siddu/Pictures/armg%20main/environment/postgres.py) | [`PostgreSQLEnvironment`](file:///c:/Users/siddu/Pictures/armg%20main/environment/postgres.py#L25) | DB connection management, catalog introspection, SQL execution | SQL string, connection config | [`ExecutionResult`](file:///c:/Users/siddu/Pictures/armg%20main/environment/base.py#L13), catalog dict |
 | **Schema Introspector** | [`agents/schema_introspector.py`](file:///c:/Users/siddu/Pictures/armg%20main/agents/schema_introspector.py) | [`SchemaIntrospector`](file:///c:/Users/siddu/Pictures/armg%20main/agents/schema_introspector.py#L55) | Formats raw catalog dictionaries into clean Markdown schema tables | Catalog dict, filter list | Markdown schema string |
 | **Schema Pruner** | [`agents/schema_pruner.py`](file:///c:/Users/siddu/Pictures/armg%20main/agents/schema_pruner.py) | [`SchemaPruner.prune`](file:///c:/Users/siddu/Pictures/armg%20main/agents/schema_pruner.py#L86) | Deterministically selects relevant dimension tables via keyword token matching | Question string | List of table names |
@@ -180,7 +194,7 @@ The implemented architecture is a closed-loop directed execution graph comprisin
 | **Repair Agent** | [`agents/repair_agent.py`](file:///c:/Users/siddu/Pictures/armg%20main/agents/repair_agent.py) | [`RepairPromptBuilder`](file:///c:/Users/siddu/Pictures/armg%20main/agents/repair_agent.py#L24), [`RepairSQLGenerator`](file:///c:/Users/siddu/Pictures/armg%20main/agents/repair_agent.py#L111) | Assembles `[STRICT REPAIR CONSTRAINTS]` block; regenerates SQL | Failed SQL, error, diagnosis, memories | Repair prompt, [`GenerationResult`](file:///c:/Users/siddu/Pictures/armg%20main/agents/sql_generator.py#L24) |
 | **Memory Governance** | [`memory/governance.py`](file:///c:/Users/siddu/Pictures/armg%20main/memory/governance.py) | [`MemoryGovernanceEngine`](file:///c:/Users/siddu/Pictures/armg%20main/memory/governance.py#L23) | Executes mathematical equations for utility, admission, escalation, penalty, decay | Memory, Knowledge, epoch | Updated [`RuntimeMemory`](file:///c:/Users/siddu/Pictures/armg%20main/memory/models.py#L90) |
 | **Vector Store** | [`memory/vector_store.py`](file:///c:/Users/siddu/Pictures/armg%20main/memory/vector_store.py) | [`FAISSMemoryStore`](file:///c:/Users/siddu/Pictures/armg%20main/memory/vector_store.py#L24) | CPU FAISS nearest-neighbor indexing with decoupled metadata mapping | 768-dim vector, RuntimeMemory | Nearest neighbors, distance, similarity |
-| **Workflow Graph** | [`graph/workflow.py`](file:///c:/Users/siddu/Pictures/armg%20main/graph/workflow.py) | [`ARMGRepairWorkflow`](file:///c:/Users/siddu/Pictures/armg%20main/graph/workflow.py#L88) | Compiles and executes the 10-node LangGraph state machine | [`ARMGState`](file:///c:/Users/siddu/Pictures/armg%20main/graph/state.py#L34) | Terminal [`ARMGState`](file:///c:/Users/siddu/Pictures/armg%20main/graph/state.py#L34) |
+| **Workflow Graph** | [`graph/workflow.py`](file:///c:/Users/siddu/Pictures/armg%20main/graph/workflow.py) | [`ARMGRepairWorkflow`](file:///c:/Users/siddu/Pictures/armg%20main/graph/workflow.py#L88) | Compiles and executes the 11-node LangGraph state machine | [`ARMGState`](file:///c:/Users/siddu/Pictures/armg%20main/graph/state.py#L34) | Terminal [`ARMGState`](file:///c:/Users/siddu/Pictures/armg%20main/graph/state.py#L34) |
 | **Evaluation Runner** | [`scripts/eval_runner.py`](file:///c:/Users/siddu/Pictures/armg%20main/scripts/eval_runner.py) | `main()`, `run_mode_experiment()` | Executes formal benchmark across 6 modes; records telemetry and CSVs | Mode, dataset, seeds | Benchmark CSV, Summary Markdown |
 | **Equivalence Engine** | [`benchmark/equivalence.py`](file:///c:/Users/siddu/Pictures/armg%20main/benchmark/equivalence.py) | [`check_relational_equivalence`](file:///c:/Users/siddu/Pictures/armg%20main/benchmark/equivalence.py#L102) | Verifies multiset relational equivalence between generated and gold queries | Gen rows, Gold rows, SQL texts | `is_equivalent: bool` |
 
@@ -380,22 +394,39 @@ $$\text{Governance Action} = \begin{cases}
 
 ---
 
-## 12. Canonical Safety Methodology
+## 12. Canonical Safety Methodology: 5-Layer Defense-in-Depth Model
 
 ### 1. Multi-Tiered Safety Architecture
-1. **Prompt Directive**: Instructs LLM to generate read-only `SELECT` queries enclosed in markdown blocks ([`agents/sql_generator.py:76-86`](file:///c:/Users/siddu/Pictures/armg%20main/agents/sql_generator.py#L76-L86)).
-2. **Pre-Execution AST Inspection**: [`ExecutionValidator`](file:///c:/Users/siddu/Pictures/armg%20main/validation/execution_validator.py#L144-L157) parses candidate queries via SQLGlot before database driver invocation.
-3. **Multi-Statement Rejection**: Parsed statement count must equal exactly 1. Stacked injections (e.g. `SELECT 1; DROP TABLE ...`) are rejected.
-4. **Mutation Type Traversal**: Traverses AST nodes to detect instances or subtrees of forbidden expression types:
-   ```python
-   MUTATION_EXPRESSION_TYPES = (
-       exp.Drop, exp.Delete, exp.Update, exp.Insert, exp.Create,
-       exp.Alter, exp.TruncateTable, exp.Command, exp.Transaction,
-       exp.Commit, exp.Rollback,
-   )
-   ```
-5. **Administrative Keyword Traversal**: Rejects unparsed tokens matching `GRANT`, `REVOKE`, `MERGE`, `EXEC`, `EXECUTE`.
-6. **Root Node Enforcement**: Root expression must be an instance of `exp.Select` or `exp.Union`.
+1. **Layer 1: Pre-Generation Natural Language Intent Gate** ([`validation/intent_classifier.py`](file:///c:/Users/siddu/Pictures/armg%20main/validation/intent_classifier.py)):
+   - Rule-based natural language intent classification executing before schema introspection or LLM inference.
+   - Evaluates input queries for destructive verbs (`DROP`, `DELETE`, `TRUNCATE`, `ALTER`, `UPDATE`, `INSERT`), administrative commands, or ambiguities using regex pattern matching and negation analysis.
+   - Categories: `SAFE` (proceeds), `BLOCKED` (immediate short-circuit to Node 11 in `STATUS_BLOCKED`), `AMBIGUOUS` (short-circuit to `STATUS_FAILED` with clarification prompt), `EXPLANATORY` (metadata inquiries).
+   - Zero prompt tokens consumed and zero database queries executed on blocked requests.
+   - *Technical Limitation*: Deterministic rule-based filter, not a deep neural classifier; provides fast operational containment but does not guarantee immunity against obfuscated adversarial injections.
+2. **Layer 2: Pre-Execution AST Inspection** ([`validation/execution_validator.py`](file:///c:/Users/siddu/Pictures/armg%20main/validation/execution_validator.py), [`validation/safety_guard.py`](file:///c:/Users/siddu/Pictures/armg%20main/validation/safety_guard.py)):
+   - Parses candidate queries via SQLGlot before database driver invocation.
+   - Multi-statement injection rejection: Parsed statement count must equal exactly 1 (stacked injections like `SELECT 1; DROP TABLE ...` are halted).
+   - Mutation type traversal halting non-SELECT root expressions or embedded mutation AST subtrees:
+     ```python
+     MUTATION_EXPRESSION_TYPES = (
+         exp.Drop, exp.Delete, exp.Update, exp.Insert, exp.Create,
+         exp.Alter, exp.TruncateTable, exp.Command, exp.Transaction,
+         exp.Commit, exp.Rollback,
+     )
+     ```
+   - Administrative keyword traversal: Rejects unparsed tokens matching `GRANT`, `REVOKE`, `MERGE`, `EXEC`, `EXECUTE`.
+   - Root node enforcement: Root expression must be an instance of `exp.Select` or `exp.Union`.
+3. **Layer 3: Explicit User-Constraint & Projection Validation** ([`validation/constraint_validator.py`](file:///c:/Users/siddu/Pictures/armg%20main/validation/constraint_validator.py)):
+   - Required Tables: Mandates that all explicitly specified required tables are referenced in `FROM` or `JOIN` clauses.
+   - Prohibited Tables & Substitution Prevention: Enforces exclusion of prohibited tables, preventing unauthorized entity substitutions.
+   - Output-Column Validation: Inspects AST `SELECT` expressions against explicit target attributes; explicitly rejects wildcard (`*`) expansions when specific columns are mandated to prevent schema attribute leakage.
+   - Constraint-Aware Repair: Violations are classified and propagated into `[STRICT REPAIR CONSTRAINTS]` to prevent oscillation.
+4. **Layer 4: PostgreSQL Driver & Database Containment** ([`environment/postgres.py`](file:///c:/Users/siddu/Pictures/armg%20main/environment/postgres.py)):
+   - DB-API execution via `psycopg2-binary` enforces connection-level query timeouts (`timeout_seconds = 15.0`).
+   - Read-only transactional settings preventing server-side data mutations.
+5. **Layer 5: Governed Memory Admission & Terminal-State Isolation** ([`memory/governance.py`](file:///c:/Users/siddu/Pictures/armg%20main/memory/governance.py)):
+   - Strict admission suppression: Queries terminating in `STATUS_BLOCKED`, explicit constraint violations, or exhausted retry budgets are barred from FAISS admission (`SAFETY_VIOLATION_BLOCKED`, `CONSTRAINT_VIOLATION_BLOCKED`, `TERMINAL_FAILURE_NOT_ADMITTED`).
+   - Administrative Quarantine API: `workflow.quarantine_memory_by_id` allows programmatic isolation of degraded memories.
 
 ### 2. StateGraph Safety Containment
 When a safety violation occurs:
@@ -407,6 +438,11 @@ When a safety violation occurs:
 ### 3. Wording Boundary: Implemented Safety vs. Universal Safety
 - **Defensible Wording**: *"Zero destructive SQL statements reached the database across 600 evaluated query runs, verifying pre-execution AST safety enforcement for the evaluated benchmark."*
 - **Prohibited Overstatement**: *"ARMG provides an absolute universal guarantee of database security against all possible injection vectors."*
+
+### 4. Experimental Version Scope & Delineation
+- The empirical results reported in Section 15 represent the frozen canonical ARMG v1.0 benchmark ($n = 3$ seeds, 450 total evaluations across 6 modes).
+- The pre-generation natural-language intent classifier (`IntentClassifier`) and explicit user-constraint validation layer (`ConstraintValidator`) represent post-v1.0 architectural enhancements introduced to provide pre-generation resource containment and table/column constraint preservation.
+- These post-v1.0 enhancements have been independently validated through targeted unit and integration test suites (119 passing tests), and are documented without modifying or reinterpreting the frozen empirical v1.0 benchmark results.
 
 ---
 

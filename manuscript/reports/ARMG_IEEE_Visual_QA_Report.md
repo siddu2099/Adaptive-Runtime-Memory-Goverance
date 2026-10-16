@@ -22,7 +22,7 @@ Each rendered visual asset was audited against IEEE formatting guidelines and em
 
 | Figure | Single Column | Two Column | Text Readability | Label Clipping | Legend | Scientific Correctness | Status |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Figure 1**: End-to-End ARMG Architecture and Closed-Loop State Machine | Readable (as full workflow) | Recommended (span 2 cols) | Clean hierarchical boxes; node numbers 1–10; font $\ge 8.5\,\text{pt}$ | Zero clipping; Node 10 expanded to eliminate title/text overlap | Clear edge styles; condition labels explicit; unambiguous loopback | Canonical 10-node LangGraph state machine from `graph/workflow.py` | **PASSED** (Step 5.1 Verified) |
+| **Figure 1**: End-to-End ARMG Architecture and Closed-Loop State Machine | Readable (as full workflow) | Recommended (span 2 cols) | Clean hierarchical boxes; node numbers 1–11; font $\ge 8.5\,\text{pt}$ | Zero clipping; Node 11 expanded to eliminate title/text overlap | Clear edge styles; condition labels explicit; unambiguous loopback | Canonical 11-node LangGraph state machine from `graph/workflow.py` | **PASSED** (11-Node Architecture Verified) |
 | **Figure 2**: ARMG Runtime Memory Lifecycle State Transition Machine | Highly readable | Excellent | State names in bold uppercase; equation thresholds annotated ($\ge 8\,\text{pt}$) | Zero clipping; state radii and bounding boxes spacious | Edge labels distinguish admission, penalty, reinforcement; zero collisions | Exact 6 lifecycle states from `memory/governance.py`; arrow directions strictly verified (NEW $\to$ ACTIVE forward, ARCHIVED $\to$ DELETED downward) | **PASSED** (Step 5.1 Verified) |
 | **Figure 3**: Pre-Remediation vs. Post-Remediation FAISS Retrieval Geometry | Readable | Recommended (side-by-side panels) | Panel titles bold; threshold $\tau=0.50$ highlighted; annotations $\ge 8\,\text{pt}$ | Zero clipping; tight layout padding = 1.8 | Red dashed threshold line with clear legend | Exact pre-remediation score $S\approx 0.0035$ vs 16 normalized events across 12 queries | **PASSED** |
 | **Figure 4**: PostgreSQL Execution Success vs. Relational Execution Accuracy | Highly readable | Excellent | Axis labels, mode ticks, and percentage annotations crisp | Zero clipping; y-limits $[0, 110\%]$ prevent bar top truncation | Paired bars (shaded ExecSucc vs hatched ExecAcc) | All 6 modes plotted from Table II; preserves 92% vs 68% and 96% vs 68% | **PASSED** (Step 5.1: Clean title) |
@@ -33,25 +33,27 @@ Each rendered visual asset was audited against IEEE formatting guidelines and em
 
 ## 3. Detailed Per-Figure Evaluation
 
-### Figure 1: Architecture Topology (Step 5.1 Verified)
+### Figure 1: Architecture Topology (11-Node StateGraph Verified)
 - **Source Script**: `manuscript/figures/source/fig1_architecture.py`
 - **Output Files**: `manuscript/figures/png/fig1_architecture.png` (300 DPI, $3300 \times 1800$), `manuscript/figures/svg/fig1_architecture.svg`
-- **Visual Structure**: 10 functional nodes arranged in closed-loop workflow:
-  1. `introspect_and_prune_node` (Schema context)
-  2. `memory_retrieval_node` (FAISS Unit-$L_2$ normalized retrieval)
-  3. `sql_generator_node` (Qwen2.5 7B greedy decoding)
-  4. `ast_guard_node` (Pre-execution AST containment)
-  5. `postgres_executor_node` (PostgreSQL physical engine)
-  6. `observation_node` (Raw error capture)
-  7. `diagnosis_node` (7-tier deterministic error taxonomy)
-  8. `knowledge_node` (Ephemeral `RuntimeKnowledge` artifact)
-  9. `repair_prompt_node` (Bounded retry prompt, $K \le 3$, loopback to Node 3)
-  10. `memory_governance_node` (Algorithmic mutual exclusion)
-- **Step 5.1 QA Corrections**:
-  - Node 10 box substantially widened and heightened ($W=18.0, H=9.0$, centered at $x=19.5, y=3.0$), completely resolving the cramped text and title overlap.
-  - Divided Node 10 internally into two clear functional sub-panels: "Memory Reinforcement" and "Candidate Memory Admission".
-  - Clean outer-perimeter repair loopback route ($x=1.5, y=-2.5 \to 3.5$) eliminating edge crossing and connector ambiguity.
-  - Bounded retry condition label ($K \le 3$) and AST safety abort arrows validated against `graph/workflow.py`.
+- **Visual Structure**: 11 functional nodes arranged in closed-loop workflow:
+  1. `intent_gate_node` (Natural language safety filter, short-circuits destructive/ambiguous queries directly to Node 11)
+  2. `introspect_and_prune_node` (Schema context & explicit user constraint extraction)
+  3. `memory_retrieval_node` (FAISS Unit-$L_2$ normalized retrieval & constraint compatibility filter)
+  4. `sql_generator_node` (Qwen2.5 7B greedy decoding)
+  5. `ast_guard_node` (Pre-execution AST containment & explicit table/output-column constraint validation)
+  6. `postgres_executor_node` (PostgreSQL physical engine)
+  7. `observation_node` (Raw error capture)
+  8. `diagnosis_node` (7-tier deterministic error taxonomy)
+  9. `knowledge_node` (Ephemeral `RuntimeKnowledge` artifact)
+  10. `repair_prompt_node` (Bounded retry prompt, $K \le 3$, loopback to Node 4)
+  11. `memory_governance_node` (Closed-loop governance, terminal state processing, blocks unvetted admission)
+- **Visual QA Corrections & Invariants**:
+  - Node 1 Intent Gate positioned at entry, routing directly to Node 11 on `BLOCK` or `AMBIGUOUS` with zero downstream LLM tokens.
+  - Node 5 dual-layer containment: SQLGlot AST read-only verification and explicit table/output-column constraints.
+  - Node 11 widened and heightened ($W=18.0, H=9.0$, centered at $x=19.5, y=3.0$), divided into two sub-panels: "Memory Reinforcement" and "Candidate Memory Admission".
+  - Clean outer-perimeter repair loopback route ($x=1.5, y=-2.5 \to 3.5$) eliminating edge crossing.
+  - Bounded retry condition label ($K \le 3$) and safety abort arrows strictly validated against `graph/workflow.py`.
 
 ### Figure 2: Lifecycle State Transition Machine (Step 5.1 Verified)
 - **Source Script**: `manuscript/figures/source/fig2_lifecycle.py`

@@ -235,5 +235,41 @@ During Step 5, all publication-quality figures and tables identified by the Step
 - Updated `scripts/verify_data_integrity.py` with Checks 8, 9, and 10 asserting canonical Table V schema, Table VI corpus distribution, and LaTeX table syntax/uniqueness.
 - Executed automated integrity script: all 10 checks passed with zero errors.
 
+---
 
+## 8. Post-v1.0 Safety and Constraint Enhancement Synchronization
 
+### 8.1 11-Node LangGraph Architecture Topology Unification
+- Synchronized all architecture descriptions across `manuscript/ieee_manuscript.md`, `manuscript/ieee_camera_ready.tex`, `manuscript/ieee_faculty_review.tex`, and `manuscript/reports/ARMG_IEEE_Paper_Revision_Dossier.md` to reflect the implemented 11-node StateGraph:
+  1. Node 1: `intent_gate_node` (Deterministic NLP symbolic filter, 0-token exit on destructive `BLOCK` or `AMBIGUOUS`).
+  2. Node 2: `introspect_and_prune_node` (Catalog introspection, pruning, and explicit constraint extraction).
+  3. Node 3: `memory_retrieval_node` (Unit-L2 FAISS search, $\tau \ge 0.50$, constraint compatibility filter).
+  4. Node 4: `sql_generator_node` (`qwen2.5:7b-instruct`, greedy temp=0.0 / manual SQL override).
+  5. Node 5: `ast_guard_node` (Dual check: SQLGlot AST read-only guard + explicit table/output-column constraint validation).
+  6. Node 6: `postgres_executor_node` (PostgreSQL 18.1 execution).
+  7. Node 7: `observation_node` (Error normalization, attempt tracing, outcome status).
+  8. Node 8: `diagnosis_node` (7-tier taxonomy, candidate resolution, negative constraints).
+  9. Node 9: `knowledge_node` (Ephemeral `RuntimeKnowledge`, retry budget check $K \le 3$).
+  10. Node 10: `repair_prompt_node` (`[STRICT REPAIR CONSTRAINTS]` assembly).
+  11. Node 11: `memory_governance_node` (Closed-loop governance, terminal state processing, mutual exclusion).
+
+### 8.2 5-Layer Defense-in-Depth Safety Architecture Formalization
+- Expanded Section 8 in all manuscripts and Section 12 in the Technical Dossier into a formal 5-layer defense-in-depth model:
+  - Layer 1: Pre-Generation Natural Language Intent Gate (`validation/intent_classifier.py`).
+  - Layer 2: Deterministic Pre-Execution AST Safety Guard (`validation/safety_guard.py` / `validation/execution_validator.py`).
+  - Layer 3: Explicit User-Constraint and Projection Validation (`validation/constraint_validator.py`).
+  - Layer 4: PostgreSQL Driver and Database Containment (`environment/postgres.py`).
+  - Layer 5: Governed Memory Admission & Terminal-State Isolation (`memory/governance.py`).
+
+### 8.3 Figure 1 Architecture Generation and Asset Synchronization
+- Updated `manuscript/figures/source/fig1_architecture.py` to authoritative 11-node StateGraph:
+  - Added Node 1 Intent Gate with short-circuit transition to Node 11.
+  - Positioned Node 5 AST & Constraint Guard and Node 11 Memory Governance.
+  - Re-rendered 300 DPI raster `manuscript/figures/png/fig1_architecture.png` and vector `manuscript/figures/svg/fig1_architecture.svg`.
+  - Updated Figure 1 captions across all manuscript formats.
+
+### 8.4 Historical Benchmark Integrity Preservation
+- Explicitly documented the experimental version boundary:
+  - Preserved canonical ARMG v1.0 benchmark results ($n = 3$ seeds, 450 total evaluations across 6 modes).
+  - Clearly articulated that the intent classifier and constraint preservation layers represent post-v1.0 runtime safety enhancements validated via unit and regression test suites (119 passing tests).
+  - No historical empirical metrics, raw benchmark CSVs, or canonical scripts were modified or retroactively altered.

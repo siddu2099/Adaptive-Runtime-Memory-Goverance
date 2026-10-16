@@ -27,7 +27,7 @@ Following the complete integration of verified academic literature, replacement 
 
 | Technical Component | Implementation Baseline (Code / Dossier) | Manuscript Representation | Audit Status | Evidence & Verification Notes |
 | :--- | :--- | :--- | :---: | :--- |
-| **StateGraph Node Count** | 10 functional nodes in `graph/workflow.py:88-160` | Described as a 10-node directed state graph in Abstract, Section 1, and Section 4 | **VERIFIED** | Matches LangGraph workflow compilation exactly. |
+| **StateGraph Node Count** | 11 functional nodes in `graph/workflow.py:88-160` | Described as an 11-node directed state graph in Abstract, Section 1, and Section 4 | **VERIFIED** | Matches LangGraph workflow compilation exactly. |
 | **Exception Taxonomy** | 7-tier precedence taxonomy in `agents/taxonomy.py:11-34` | Formally detailed in Table I and Section 5.1 across Tiers 1 through 7 | **VERIFIED** | The outdated 5-class formulation has been 100% eliminated. |
 | **Candidate Resolution** | Deterministic substring, token overlap, SequenceMatcher in `agents/error_diagnosis.py` | Fully detailed in Section 5.2 with exact heuristic scoring weights ($+10, +8, +4, +15$) | **VERIFIED** | Matches diagnostic candidate remapping implementation. |
 | **RuntimeKnowledge Model** | Immutable Pydantic model in `memory/models.py:20-78` | Specified as immutable ephemeral artifact with exact field names in Section 5.3 | **VERIFIED** | Clearly states volatile metadata is stripped during embedding. |

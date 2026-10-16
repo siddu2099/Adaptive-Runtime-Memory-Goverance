@@ -3,7 +3,7 @@
 ---
 
 ## Abstract
-Deploying local Large Language Models (LLMs) for enterprise Text-to-SQL workflows introduces acute operational challenges: repetitive schema repair oscillations, unconstrained vector memory accumulation in retrieval stores, and the catastrophic risk of executing destructive SQL mutations against relational warehouses. Standard stateless self-correction prompts models with raw database errors without cross-query operational memory, while unmanaged vector retrieval systems suffer from duplicate accumulation and memory bloat. This paper presents **Adaptive Runtime Memory Governance (ARMG)**, a closed-loop runtime architecture that converts PostgreSQL database execution feedback into governed, reusable operational memory. ARMG wraps frozen local open-weights models in a 10-node directed state graph integrating deterministic Abstract Syntax Tree (AST) and catalog-based error diagnosis across a canonical 7-tier exception taxonomy, ephemeral knowledge extraction, admission- and reinforcement-gated FAISS vector memory, diagnostic negative constraints, and a deterministic pre-execution AST safety guardrail.
+Deploying local Large Language Models (LLMs) for enterprise Text-to-SQL workflows introduces acute operational challenges: repetitive schema repair oscillations, unconstrained vector memory accumulation in retrieval stores, and the catastrophic risk of executing destructive SQL mutations against relational warehouses. Standard stateless self-correction prompts models with raw database errors without cross-query operational memory, while unmanaged vector retrieval systems suffer from duplicate accumulation and memory bloat. This paper presents **Adaptive Runtime Memory Governance (ARMG)**, a closed-loop runtime architecture that converts PostgreSQL database execution feedback into governed, reusable operational memory. ARMG wraps frozen local open-weights models in an 11-node directed state graph integrating a pre-generation natural-language intent safety gate, catalog schema introspection with explicit user-constraint preservation, deterministic Abstract Syntax Tree (AST) safety validation, explicit projection column validation, catalog-based error diagnosis across a canonical 7-tier exception taxonomy, ephemeral knowledge extraction, admission- and reinforcement-gated FAISS vector memory, and diagnostic negative constraints.
 
 In an empirical evaluation across three isolated repeated benchmark executions ($n = 3$, comprising 450 total evaluated query runs across six experimental modes) on a 25-query synthetic enterprise-style Star Schema data warehouse using local `qwen2.5:7b-instruct` under greedy decoding (`temperature = 0.0`), ARMG achieved verified pre-execution safety, preventing any destructive SQL statement from reaching the PostgreSQL database. Both Full ARMG (Mode 4) and stateless self-correction (Mode 2) achieved **96.00% PostgreSQL execution success** (72 of 75 queries) and **68.00% relational execution accuracy** (51 of 75 queries), recovering from 80.00% success and 60.00% accuracy in zero-shot baseline (Mode 1). Furthermore, algorithmic mutual exclusion between reinforcement and admission maintained persistent vector store size strictly invariant at exactly 3 memories in the evaluated sequential benchmark, compared to unmanaged retrieval accumulation (23 memories in Mode 3). ARMG incurred a **39.73% end-to-end latency overhead** (9,000.59 ms vs. 6,441.56 ms), a **33.33% increase in mean repair iterations** (0.37 vs. 0.28 retries per query), and a **19.68% increase in token expenditure** (602.85 vs. 503.72 tokens per query) due to prompt memory injection and state-graph orchestration. In addition, continuous exponential temporal decay remained experimentally unexercised under the ~3.5-minute benchmark execution clock. These findings demonstrate that governed operational memory provides bounded store growth, reproducible lifecycle control, and verifiable execution safety, while establishing that operational memory alone does not overcome the baseline semantic window-function reasoning boundaries of local 7B-parameter models.
 
@@ -21,7 +21,7 @@ Enterprise adoption of natural language interfaces to relational databases (Text
 3. **Execution Safety Hazards**: Unbounded Text-to-SQL agents risk synthesizing destructive Data Manipulation Language (DML) or Data Definition Language (DDL) statements (`DELETE`, `DROP`, `UPDATE`, `TRUNCATE`), presenting severe operational risks if connected to live warehouse environments [9]–[11].
 4. **The Executable vs. Relational Correctness Gap**: While commercial evaluations frequently report database execution rates, executable SQL is frequently non-equivalent to the analytical intent of the user [12], [13].
 
-To address these limitations, we introduce **Adaptive Runtime Memory Governance (ARMG)**, a closed-loop runtime architecture that governs the extraction, admission, retrieval, reinforcement, and application of runtime operational knowledge for local Text-to-SQL systems. Rather than updating underlying model weights via fine-tuning, ARMG structures execution feedback into an ephemeral diagnostic intermediate representation (`RuntimeKnowledge`) that undergoes mathematical admission gating before entering a persistent FAISS vector index. Crucially, ARMG enforces strict algorithmic mutual exclusion between the reinforcement of existing memories and the admission of new knowledge, preventing duplicate memory accumulation. A deterministic Abstract Syntax Tree (AST) validation layer parses every query prior to database driver invocation, halting destructive mutations before execution.
+To address these limitations, we introduce **Adaptive Runtime Memory Governance (ARMG)**, a closed-loop runtime architecture that governs the extraction, admission, retrieval, reinforcement, and application of runtime operational knowledge for local Text-to-SQL systems. Rather than updating underlying model weights via fine-tuning, ARMG structures execution feedback into an ephemeral diagnostic intermediate representation (`RuntimeKnowledge`) that undergoes mathematical admission gating before entering a persistent FAISS vector index. Crucially, ARMG enforces strict algorithmic mutual exclusion between the reinforcement of existing memories and the admission of new knowledge, preventing duplicate memory accumulation. A multi-layered defense-in-depth safety architecture combines pre-generation natural-language intent gating, static Abstract Syntax Tree (AST) validation, and explicit table/projection constraint checking to halt destructive or non-compliant queries before execution.
 
 ### Research Gap Formulation
 While recent research has advanced decomposed in-context learning [1], multi-agent collaboration [14], and verbal self-correction [4], [5], prior work has focused primarily on cloud-hosted frontier models and single-turn query synthesis. Existing frameworks do not explicitly investigate how to maintain persistent, governed operational knowledge across sequential queries in resource-constrained local environments without inducing vector store bloat, nor do they couple execution repair with deterministic AST-level pre-execution safety barriers. **ARMG investigates an integrated runtime governance architecture combining:**
@@ -32,7 +32,7 @@ While recent research has advanced decomposed in-context learning [1], multi-age
 5. Governed persistent operational vector memory;
 6. Algorithmic mutual exclusion between memory reinforcement and admission;
 7. Diagnostic negative repair constraints;
-8. Deterministic pre-execution SQL AST safety validation; and
+8. Multi-layered pre-execution safety validation (NLP intent gating, AST guard, and explicit user-constraint enforcement); and
 9. Rigorous, explicit evaluation separating PostgreSQL execution success from relational execution accuracy.
 
 ### Summary of Empirical Findings
@@ -44,10 +44,10 @@ We evaluate ARMG across three isolated repeated benchmark executions ($n = 3$, c
 - **Architectural Latency Trade-Off**: ARMG incurred a 39.73% end-to-end latency penalty (9,000.59 ms vs. 6,441.56 ms), a 33.33% increase in repair retries (0.37 vs. 0.28), and a 19.68% increase in token expenditure (602.85 vs. 503.72 tokens), demonstrating that memory injection introduces orchestration overhead without resolving baseline 7B semantic reasoning limits.
 
 ### Research Contributions
-1. **Architectural Contribution**: We design and implement a closed-loop runtime architecture decoupled from model weights, orchestrating zero-token catalog schema introspection, static AST safety validation, 7-tier deterministic error diagnosis, and bounded self-correction in a 10-node directed state graph.
+1. **Architectural Contribution**: We design and implement a closed-loop runtime architecture decoupled from model weights, orchestrating zero-token natural-language intent gating, catalog schema introspection with explicit user-constraint extraction, static AST safety validation, 7-tier deterministic error diagnosis, and bounded self-correction in an 11-node directed state graph.
 2. **Runtime Operational Knowledge Contribution**: We formalize an immutable ephemeral knowledge artifact (`RuntimeKnowledge`) and a diagnostic negative constraint mechanism that isolates broken SQL tokens and schema identifiers, preventing repetitive repair cycling.
 3. **Memory Governance Contribution**: We formulate a mathematical governance engine incorporating multi-factor operational utility, asymptotic confidence escalation, multiplicative failure penalties, continuous exponential decay, and an algorithmic mutual-exclusion deduplication invariant.
-4. **Safety Contribution**: We implement a multi-layered pre-execution AST containment mechanism using SQLGlot that intercepts destructive DDL/DML mutations and multi-statement injections prior to database driver invocation.
+4. **Safety Contribution**: We implement a multi-layered defense-in-depth safety mechanism spanning pre-generation natural-language intent classification, static SQL AST validation using SQLGlot, explicit user-constraint and projection enforcement (preventing unapproved table substitutions and wildcard `*` leakage), and terminal-state memory admission suppression.
 5. **Empirical Characterization of Local 7B Text-to-SQL**: We provide a rigorous evaluation across 450 query runs, isolating the trade-off profile between repair efficiency, token expenditure, latency overhead, and the semantic reasoning ceiling of local 7B language models.
 
 ---
@@ -109,23 +109,24 @@ $$\text{ExecSucc}(s) = 1 \centernot\implies \text{ExecAcc}(s) = 1$$
 ---
 
 ## 4. ARMG Architecture
-The ARMG architecture is implemented as a closed-loop directed execution graph comprising 10 functional nodes orchestrated via LangGraph [22] (`graph/workflow.py`):
+The ARMG architecture is implemented as a closed-loop directed execution graph comprising 11 functional nodes orchestrated via LangGraph [22] (`graph/workflow.py`):
 
-1. **Node 1: `introspect_and_prune_node`**: Introspects relational database catalog metadata via zero-token `information_schema` queries. Deterministically prunes schema down to query-relevant tables using rule-based token matching.
-2. **Node 2: `memory_retrieval_node`**: Computes unit-L2 normalized 768-dimensional query embedding via local `nomic-embed-text` [18]. Performs nearest-neighbor search in FAISS CPU store [17], retrieving active/stable memories exceeding threshold $\tau = 0.50$.
-3. **Node 3: `sql_generator_node`**: Generates initial candidate SQL or regenerates repaired SQL using local `qwen2.5:7b-instruct` [3] under greedy decoding (`temperature = 0.0`).
-4. **Node 4: `ast_guard_node`**: Performs static pre-execution Abstract Syntax Tree (AST) validation using SQLGlot [10]. Verifies single-statement execution and blocks destructive mutations.
-5. **Node 5: `postgres_executor_node`**: Submits validated read-only SQL queries to physical PostgreSQL instance, capturing execution status, result rows, execution latency, and raw driver errors.
-6. **Node 6: `observation_node`**: Passively normalizes raw execution exceptions or validation rejections into an immutable `RuntimeObservation` record (`environment/observation.py`) without root-cause classification.
-7. **Node 7: `diagnosis_node`**: Deterministically classifies normalized error traces into a canonical 7-tier exception taxonomy, extracts broken identifiers, resolves schema candidate remappings, and generates negative constraints.
-8. **Node 8: `knowledge_node`**: Transforms diagnostic findings into an ephemeral `RuntimeKnowledge` artifact (`memory/models.py`) and evaluates the retry budget ($K \le 3$).
-9. **Node 9: `repair_prompt_node`**: Assembles the strictly bounded repair prompt containing the isolated `[STRICT REPAIR CONSTRAINTS]` block and routes execution back to Node 3.
-10. **Node 10: `memory_governance_node`**: Applies mathematical governance upon terminal states (`STATUS_SUCCESS`, `STATUS_FAILED`, `STATUS_BLOCKED`). Enforces mutual exclusion: reinforces applied memories or admits fresh operational knowledge into FAISS.
+1. **Node 1: `intent_gate_node`**: Rule-based natural-language intent safety classifier (`validation/intent_classifier.py`). Evaluates input query strings using deterministic regex and pattern rules, categorizing requests into `SAFE`, `BLOCKED`, `AMBIGUOUS`, or `EXPLANATORY`. Destructive mutations or ambiguous queries short-circuit directly to Node 11 (`STATUS_BLOCKED` or `STATUS_FAILED`), bypassing LLM generation tokens and database driver invocation entirely.
+2. **Node 2: `introspect_and_prune_node`**: Introspects relational database catalog metadata via zero-token `information_schema` queries. Deterministically prunes schema to query-relevant tables and extracts explicit user constraints (`required_tables`, `prohibited_tables`, `output_columns`).
+3. **Node 3: `memory_retrieval_node`**: Computes unit-$L_2$ normalized 768-dimensional query embedding via local `nomic-embed-text` [18]. Performs nearest-neighbor search in FAISS CPU store [17] ($\tau = 0.50$), filtering retrieved memories to ensure compatibility with active table constraints.
+4. **Node 4: `sql_generator_node`**: Generates initial candidate SQL or regenerates repaired SQL using local `qwen2.5:7b-instruct` [3] under greedy decoding (`temperature = 0.0`), supporting manual SQL overrides when provided.
+5. **Node 5: `ast_guard_node`**: Dual-layer pre-execution validator combining SQLGlot [10] AST safety validation with explicit user-constraint verification (`validation/constraint_validator.py`). Halts destructive DDL/DML mutations, validates required table presence, enforces prohibited table exclusion, verifies table substitution restrictions, and ensures output projection columns strictly match requested attributes without wildcard (`*`) leakage.
+6. **Node 6: `postgres_executor_node`**: Submits validated read-only SQL queries to physical PostgreSQL instance, capturing execution status, result rows, execution latency, and raw driver errors.
+7. **Node 7: `observation_node`**: Passively normalizes raw execution exceptions or validation rejections into an immutable `RuntimeObservation` record (`environment/observation.py`) without root-cause classification.
+8. **Node 8: `diagnosis_node`**: Deterministically classifies normalized error traces into a canonical 7-tier exception taxonomy, extracts broken identifiers, resolves schema candidate remappings, and generates negative constraints (preserving user constraints).
+9. **Node 9: `knowledge_node`**: Transforms diagnostic findings into an ephemeral `RuntimeKnowledge` artifact (`memory/models.py`) and evaluates the retry budget ($K \le 3$).
+10. **Node 10: `repair_prompt_node`**: Assembles the strictly bounded repair prompt containing the isolated `[STRICT REPAIR CONSTRAINTS]` block and routes execution back to Node 4.
+11. **Node 11: `memory_governance_node`**: Applies mathematical governance upon terminal states (`STATUS_SUCCESS`, `STATUS_FAILED`, `STATUS_BLOCKED`). Enforces mutual exclusion: reinforces applied memories or admits fresh operational knowledge into FAISS; strictly prevents memory admission or positive reinforcement for blocked requests, constraint violations, or terminal failures.
 
 The complete closed-loop execution topology, deterministic safety barrier, and repair state machine are illustrated in Fig. 1.
 
 ![Figure 1: End-to-End ARMG Architecture and Closed-Loop State Machine](figures/png/fig1_architecture.png)
-*Fig. 1. End-to-End ARMG Architecture and Closed-Loop State Machine. The canonical 10-node LangGraph execution graph enforces deterministic AST safety gating prior to PostgreSQL execution, orchestrates bounded 7-tier diagnostic repair ($K \le 3$), and executes algorithmic mutual exclusion between memory reinforcement and admission at terminal outcomes.*
+*Fig. 1. End-to-End ARMG Architecture and Closed-Loop State Machine. The canonical 11-node LangGraph execution graph enforces pre-generation intent gating, explicit user-constraint validation, and deterministic AST safety gating prior to PostgreSQL execution, orchestrates bounded 7-tier diagnostic repair ($K \le 3$), and executes algorithmic mutual exclusion between memory reinforcement and admission at terminal outcomes.*
 
 ---
 
@@ -243,11 +244,44 @@ During repair, the `RepairSQLGenerator` (`agents/repair_agent.py`) constructs a 
 
 ---
 
-## 8. Safety Enforcement
-To enforce strict pre-execution containment against destructive mutations, ARMG implements a multi-layered guardrail:
-- **Prompt Directive**: Instructs the LLM to output only read-only `SELECT` queries.
-- **Deterministic AST Parser**: The `ExecutionValidator` parses candidate SQL using SQLGlot [10] before database driver invocation. Any AST root node matching `Drop`, `Delete`, `Update`, `Insert`, `Create`, `Alter`, `TruncateTable`, `Command`, `Transaction`, `Commit`, or `Rollback` is immediately rejected. Administrative keywords (`GRANT`, `REVOKE`, `MERGE`, `EXEC`) and multi-statement injections (statement count $> 1$) are strictly forbidden.
-- **Blocked State Containment**: Safety rejections transition the state graph directly to `STATUS_BLOCKED`, bypassing PostgreSQL execution entirely and rejecting memory admission.
+## 8. Safety Enforcement: Multi-Layer Defense-in-Depth Model
+To provide robust pre-execution containment against adversarial inputs, schema manipulation, and accidental data destruction, ARMG implements a 5-layer defense-in-depth safety architecture spanning the entire query lifecycle:
+
+### 8.1 Layer 1: Pre-Generation Natural Language Intent Gate
+Before invoking schema introspection or LLM inference, user input strings are inspected by a deterministic rule-based intent safety classifier (`validation/intent_classifier.py`):
+- **Classification Techniques**: Evaluates natural language queries using regular expressions, keyword token sets, negation handling, and contextual phrase boundaries.
+- **Decision Categories**: Categorizes incoming queries into:
+  1. `SAFE`: Standard analytical read-only requests. Proceeds through the normal execution graph.
+  2. `BLOCKED`: Explicitly destructive intentions (e.g., requests to `DROP`, `DELETE`, `TRUNCATE`, `ALTER`, `UPDATE`, or execute administrative shell routines). Short-circuits immediately to Node 11 in `STATUS_BLOCKED`, consuming zero LLM prompt tokens and executing zero database queries.
+  3. `AMBIGUOUS`: Unclear or underspecified queries lacking actionable analytical intent. Short-circuits to Node 11 in `STATUS_FAILED` with an actionable clarification prompt, avoiding erroneous model speculation.
+  4. `EXPLANATORY`: Meta-queries requesting schema explanations or documentation.
+- **Telemetry and State Integration**: Intent outcomes are recorded in `state["intent_category"]` and workflow telemetry.
+- **Technical Limitations**: The intent classifier is a rule-based deterministic pre-filter, not a fine-tuned neural classification model. It does not possess deep semantic comprehension and cannot guarantee absolute immunity against complex obfuscated adversarial prompt injections. It serves as an ultra-fast, zero-token first barrier, strictly distinguished from syntactic SQL AST validation.
+
+### 8.2 Layer 2: Deterministic Pre-Execution AST Safety Guard
+Candidate SQL generated by the model must pass static Abstract Syntax Tree (AST) validation (`validation/safety_guard.py`, `validation/execution_validator.py`) using SQLGlot [10]:
+- **Single-Statement Enforcement**: Ensures statement count equals exactly 1, preventing stacked injection vectors (e.g., `SELECT 1; DROP TABLE ...`).
+- **Mutation Type Traversal**: Traverses the AST syntax tree to halt any non-SELECT root expressions or embedded mutation nodes (`exp.Drop`, `exp.Delete`, `exp.Update`, `exp.Insert`, `exp.Create`, `exp.Alter`, `exp.TruncateTable`, `exp.Command`, `exp.Transaction`, `exp.Commit`, `exp.Rollback`).
+- **Administrative Token Filtering**: Scans unparsed tokens to reject administrative keywords (`GRANT`, `REVOKE`, `MERGE`, `EXEC`, `EXECUTE`).
+- **Containment Action**: Violations immediately halt execution, setting `is_safety_violation = True` and transitioning the state graph to `STATUS_BLOCKED` without PostgreSQL driver invocation.
+
+### 8.3 Layer 3: Explicit User-Constraint and Projection Validation
+Beyond generic AST read-only checks, ARMG verifies compliance with explicit user-specified operational constraints (`validation/constraint_validator.py`):
+- **Required Tables**: Verifies that every table explicitly mandated by the user query is referenced in the generated `FROM` or `JOIN` clauses.
+- **Prohibited Tables & Substitution Prevention**: Enforces strict exclusion of prohibited tables. When an analytical query specifies a target entity, the validator halts LLM attempts to substitute unapproved proxy tables (e.g., querying `dim_product` when `dim_geography` was explicitly requested).
+- **Output-Column Projection Validation**: Inspects the AST projection list (`SELECT` columns) against explicit target attributes requested by the user. When explicit output columns are specified, unconstrained wildcard (`*`) expansions are rejected to prevent sensitive schema attribute leakage.
+- **Constraint-Aware Repair Propagation**: When a constraint violation occurs, the violation is categorized under Tier 1 `Validation` or Tier 3 `Semantic` diagnosis. The violated constraints are injected into the repair prompt as strict negative constraints, ensuring replacement queries do not repeat identical schema deviations.
+
+### 8.4 Layer 4: PostgreSQL Driver and Database Containment
+Valid queries submitted to PostgreSQL 18.1 execute under strict operational boundaries:
+- **Connection Isolation**: DB-API execution via `psycopg2-binary` enforces connection-level query timeouts (`timeout_seconds = 15.0`) to mitigate denial-of-service cartesian explosions.
+- **Read-Only Session Configuration**: PostgreSQL runtime parameters restrict mutations at the session level.
+
+### 8.5 Layer 5: Governed Memory Admission & Terminal-State Isolation
+The memory governance engine strictly guards vector memory integrity across all terminal outcomes:
+- **Admission Bar on Failures and Violations**: Candidate operational knowledge is admitted to FAISS vector storage if and only if the query successfully executed and resolved an analytical error ($M_{\text{applied}} = \emptyset \land \text{Status} = \text{SUCCESS} \land \text{Retries} > 0$).
+- **Suppression on Blocked / Violated Queries**: Queries terminating in `STATUS_BLOCKED`, explicit constraint violations, or exhausted retry budgets are barred from admission (`SAFETY_VIOLATION_BLOCKED`, `CONSTRAINT_VIOLATION_BLOCKED`, `TERMINAL_FAILURE_NOT_ADMITTED`), preventing toxic or hallucinatory query patterns from corrupting the vector store.
+- **Administrative Quarantine API**: ARMG provides an authorized quarantine interface (`workflow.quarantine_memory_by_id`) allowing runtime administrators to isolate suspect or degraded memories without stopping system operations.
 
 ---
 
@@ -262,6 +296,7 @@ To enforce strict pre-execution containment against destructive mutations, ARMG 
 - **Benchmark Warehouse**: A synthetically generated enterprise-style Star Schema Data Warehouse modeling B2B technology product transactions across calendar year 2025, populated deterministically via NumPy `seed=42` (`scripts/seed_warehouse.py`, 2,000 fact records, 4 tables: `dim_time`, `dim_geography`, `dim_product`, `fact_sales_performance`). We utilize a controlled warehouse to enable precise measurement of multi-turn operational memory and lifecycle governance, contrasting with cross-domain academic benchmarks (Spider [23], BIRD [24]) that evaluate single-turn schema generalizability across hundreds of independent databases.
 - **Benchmark Corpus**: 25 analytical queries (`benchmark/queries.json`, SHA-256: `8f3a11f238bf93187e29fa18204af44b926eb190a7bbae1598caa0ea97f38189`) across Categories A, B, C, D.
 - **Repeated Experimental Protocol**: Three isolated repeated benchmark executions (Seeds 42, 123, 999) across six experimental modes ($3 \times 6 \times 25 = 450$ total evaluated query runs). Benchmark seeds are plumbed directly to Ollama options (`options["seed"]`), but because greedy decoding was strictly enforced (`temperature = 0.0`), these repeated runs evaluate **pipeline reproducibility, execution stability, and memory-state consistency**, rather than stochastic sampling variance ($n = 3$ repeated runs).
+- **Experimental Version Boundary & Provenance**: The empirical results reported in Section 10 represent the frozen canonical ARMG v1.0 benchmark ($n = 3$ seeds, 450 total evaluations across 6 modes). The pre-generation natural-language intent classifier (`IntentClassifier`) and explicit user-constraint validation layer (`ConstraintValidator`) represent post-v1.0 architectural enhancements introduced to provide pre-generation resource containment and table/column constraint preservation. These enhancements have been independently validated through targeted unit and integration test suites (119 passing tests), and are documented without retroactively modifying the frozen empirical v1.0 benchmark results.
 
 The canonical system configuration, component mapping, and operational specifications are summarized in Table IV.
 
