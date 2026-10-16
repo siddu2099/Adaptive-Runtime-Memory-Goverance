@@ -3,7 +3,9 @@ ARMG: Explicit User Constraint Validator.
 
 Extracts and enforces explicit user constraints across diagnosis, repair, and pre-execution validation:
 - Preserves explicit source/table constraints (exact required tables, prohibited tables, substitution prohibition).
-- Deterministically extracts table identifiers from SQL candidates using SQLGlot AST parsing.
+- Enforces explicit output-column projection requirements (verifies requested columns appear in SELECT projection).
+- Rejects unverified wildcard projections (SELECT *) when specific output columns are required.
+- Deterministically extracts table and column identifiers from SQL candidates using SQLGlot AST parsing.
 - Rejects constraint-violating SQL candidates before database executor invocation.
 - Ensures zero database calls and zero memory admissions for constraint-violating repairs.
 """

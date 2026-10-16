@@ -1,12 +1,18 @@
 """
-ARMG Phase 7: LangGraph Repair Orchestration Workflow.
+ARMG LangGraph Repair Orchestration Workflow (11-Node Architecture).
 
 Connects the verified components:
-    User Query -> Schema Introspection -> Governed Memory Retrieval ->
-    SQL Generation -> SQLGlot Validation -> PostgreSQL Execution ->
-    RuntimeObservation -> Deterministic Diagnosis -> RuntimeKnowledge ->
-    Strict Repair Prompt -> SQL Regeneration -> Validation -> Execution ->
-    Success / Bounded Failure
+    1.  Natural-Language Intent Safety Gate (Pre-generation symbolic classifier) ->
+    2.  Schema Introspection, Table Pruning, & Explicit Constraint Extraction ->
+    3.  Governed Memory Retrieval (FAISS vector store with constraint compatibility) ->
+    4.  SQL Candidate Generation (Ollama or initial manual override) ->
+    5.  Pre-Execution Static Validation (SQLGlot AST Read-Only Guard & User Constraint Validator) ->
+    6.  PostgreSQL Database Execution (Instrumented connection) ->
+    7.  Runtime Observation (Error normalization & attempt tracing) ->
+    8.  Deterministic Error Diagnosis (7-tier taxonomy & replacement candidate resolution) ->
+    9.  Runtime Knowledge Formulation & Retry Budget Check ->
+    10. Strict Repair Prompt Assembly ([STRICT REPAIR CONSTRAINTS] block) ->
+    11. Governed Memory Admission & Reinforcement (Terminal state governance)
 
 Bounded retry semantics:
     max_retries = 3
